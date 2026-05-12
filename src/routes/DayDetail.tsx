@@ -6,6 +6,9 @@ import { useLibraryEntry, useServingByDate } from '../lib/db'
 import { fromDateKey, formatDateHeading, isFuture } from '../lib/dates'
 import { DietaryTagChips } from '../components/DietaryTagChips'
 import { Loading } from '../components/Loading'
+import { RatingForm } from '../components/RatingForm'
+import { RatingsList } from '../components/RatingsList'
+import { LookingForwardButton } from '../components/LookingForwardButton'
 
 export function DayDetail() {
   const { date } = useParams<{ date: string }>()
@@ -95,13 +98,14 @@ export function DayDetail() {
             </div>
           )}
 
-          <div className="card opacity-70">
-            <p className="text-sm text-ink-500">
-              {future
-                ? 'Ratings will unlock once this meal is served. You can leave a "looking forward" reaction here soon.'
-                : 'Ratings and comments will appear here in the next build phase.'}
-            </p>
-          </div>
+          {future ? (
+            <LookingForwardButton servingId={serving.id} />
+          ) : (
+            <>
+              <RatingForm servingId={serving.id} />
+              <RatingsList servingId={serving.id} />
+            </>
+          )}
         </>
       )}
     </div>

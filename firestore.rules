@@ -39,13 +39,20 @@ service cloud.firestore {
 
       match /ratings/{uid} {
         allow read: if isApproved();
-        // Employee writes their own rating; Amy can hide/delete.
-        allow create, update: if (isSelf(uid) && isApproved()
-                                  && request.resource.data.stars is int
-                                  && request.resource.data.stars >= 1
-                                  && request.resource.data.stars <= 5)
-                                 || isAmy();
-        allow delete: if isAmy();
+        // Employee writes their own rating; Amy can hide/unhide and delete.
+        allow create: if (isSelf(uid) && isApproved()
+                          && request.resource.data.stars is int
+                          && request.resource.data.stars >= 1
+                          && request.resource.data.stars <= 5
+                          && request.resource.data.get('hiddenByAmy', false) == false)
+                         || isAmy();
+        allow update: if (isSelf(uid) && isApproved()
+                          && request.resource.data.stars is int
+                          && request.resource.data.stars >= 1
+                          && request.resource.data.stars <= 5
+                          && request.resource.data.get('hiddenByAmy', false) == resource.data.get('hiddenByAmy', false))
+                         || isAmy();
+        allow delete: if isSelf(uid) || isAmy();
       }
 
       match /lookingForward/{uid} {
