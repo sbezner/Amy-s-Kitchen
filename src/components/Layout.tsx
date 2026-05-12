@@ -2,6 +2,7 @@ import { NavLink, Outlet } from 'react-router-dom'
 import { signOut } from 'firebase/auth'
 import { auth } from '../firebase'
 import { useAuth } from '../auth/AuthProvider'
+import { InstallBanner } from './InstallBanner'
 
 export function Layout() {
   const { appUser } = useAuth()
@@ -9,7 +10,7 @@ export function Layout() {
 
   return (
     <div className="min-h-screen flex flex-col bg-cream-50">
-      <header className="px-5 pt-5 pb-3 flex items-center justify-between">
+      <header className="px-5 pt-5 pb-3 flex items-center justify-between print:hidden">
         <div>
           <h1 className="text-2xl leading-tight">Amy's Kitchen</h1>
           <p className="text-xs text-ink-500">
@@ -22,11 +23,13 @@ export function Layout() {
         </button>
       </header>
 
+      <InstallBanner />
+
       <main className="flex-1 px-5 pb-28">
         <Outlet />
       </main>
 
-      <nav className="fixed bottom-0 inset-x-0 bg-white/95 backdrop-blur border-t border-cream-200 pb-[env(safe-area-inset-bottom)]">
+      <nav className="fixed bottom-0 inset-x-0 bg-white/95 backdrop-blur border-t border-cream-200 pb-[env(safe-area-inset-bottom)] print:hidden">
         <div className="max-w-md mx-auto grid grid-cols-3">
           <TabLink to="/" label="Calendar" icon={CalendarIcon} end />
           <TabLink to="/requests" label="Requests" icon={RequestsIcon} />

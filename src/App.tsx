@@ -17,6 +17,7 @@ import { ScheduleMeal } from './routes/admin/ScheduleMeal'
 import { Employees } from './routes/admin/Employees'
 import { RequestsAdmin } from './routes/admin/RequestsAdmin'
 import { Reports } from './routes/admin/Reports'
+import { Poster } from './routes/admin/Poster'
 
 function Gate({ children }: { children: ReactNode }) {
   const { fbUser, appUser, loading } = useAuth()
@@ -52,6 +53,7 @@ export function App() {
               <Route path="employees" element={<Employees />} />
               <Route path="requests" element={<RequestsAdmin />} />
               <Route path="reports" element={<Reports />} />
+              <Route path="poster" element={<Poster />} />
             </Route>
           </Route>
         </Routes>
