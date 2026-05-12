@@ -16,6 +16,7 @@ import { EditMeal } from './routes/admin/EditMeal'
 import { ScheduleMeal } from './routes/admin/ScheduleMeal'
 import { Employees } from './routes/admin/Employees'
 import { RequestsAdmin } from './routes/admin/RequestsAdmin'
+import { Reports } from './routes/admin/Reports'
 
 function Gate({ children }: { children: ReactNode }) {
   const { fbUser, appUser, loading } = useAuth()
@@ -24,17 +25,6 @@ function Gate({ children }: { children: ReactNode }) {
   if (!appUser) return <Loading />
   if (appUser.status !== 'approved') return <Pending />
   return <>{children}</>
-}
-
-function ComingSoon({ title }: { title: string }) {
-  return (
-    <div className="py-4">
-      <div className="card">
-        <h2 className="text-xl mb-2">{title}</h2>
-        <p className="text-ink-700 text-sm">Coming next in the build.</p>
-      </div>
-    </div>
-  )
 }
 
 export function App() {
@@ -61,7 +51,7 @@ export function App() {
               <Route path="schedule/:date" element={<ScheduleMeal />} />
               <Route path="employees" element={<Employees />} />
               <Route path="requests" element={<RequestsAdmin />} />
-              <Route path="reports" element={<ComingSoon title="Reports" />} />
+              <Route path="reports" element={<Reports />} />
             </Route>
           </Route>
         </Routes>
