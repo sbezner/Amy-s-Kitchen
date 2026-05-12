@@ -50,7 +50,18 @@ the Firebase CLI:
 npm install -g firebase-tools
 firebase login
 firebase use --add   # pick your project
-firebase deploy --only firestore:rules
+firebase deploy --only firestore:rules,storage
+```
+
+Both `firestore.rules` and `storage.rules` live at the repo root. A minimal
+`firebase.json` you can add locally (it's gitignored on purpose so you can use
+your own project alias):
+
+```json
+{
+  "firestore": { "rules": "firestore.rules" },
+  "storage":   { "rules": "storage.rules" }
+}
 ```
 
 ### 3. Bootstrap Amy's account
