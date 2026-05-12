@@ -1,0 +1,14 @@
+{
+  "name": "Amy's Kitchen",
+  "short_name": "Amy's Kitchen",
+  "description": "Daily meals from Amy for Energized Engines.",
+  "start_url": "./",
+  "scope": "./",
+  "display": "standalone",
+  "orientation": "portrait",
+  "background_color": "#FBF7F0",
+  "theme_color": "#C97751",
+  "icons": [
+    { "src": "icon.svg", "sizes": "any", "type": "image/svg+xml", "purpose": "any maskable" }
+  ]
+}
