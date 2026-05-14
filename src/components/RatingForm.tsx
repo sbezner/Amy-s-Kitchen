@@ -53,6 +53,8 @@ export function RatingForm({ servingId }: Props) {
         { merge: true },
       )
       setSavedAt(Date.now())
+    } catch (err) {
+      alert(err instanceof Error ? err.message : 'Could not save your rating')
     } finally {
       setSaving(false)
     }
@@ -61,9 +63,13 @@ export function RatingForm({ servingId }: Props) {
   async function clear() {
     if (!appUser) return
     if (!confirm('Remove your rating for this meal?')) return
-    await deleteDoc(doc(db, 'servings', servingId, 'ratings', appUser.uid))
-    setStars(0)
-    setComment('')
+    try {
+      await deleteDoc(doc(db, 'servings', servingId, 'ratings', appUser.uid))
+      setStars(0)
+      setComment('')
+    } catch (err) {
+      alert(err instanceof Error ? err.message : 'Could not remove your rating')
+    }
   }
 
   return (

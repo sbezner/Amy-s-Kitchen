@@ -44,6 +44,8 @@ export function LookingForwardButton({ servingId }: Props) {
           createdAt: serverTimestamp(),
         })
       }
+    } catch (err) {
+      alert(err instanceof Error ? err.message : 'Could not update reaction')
     } finally {
       setBusy(false)
     }

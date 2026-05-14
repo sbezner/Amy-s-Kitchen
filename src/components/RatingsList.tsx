@@ -44,16 +44,23 @@ export function RatingsList({ servingId }: Props) {
   }, [servingId])
 
   async function toggleHidden(r: RatingDoc) {
-    await updateDoc(doc(db, 'servings', servingId, 'ratings', r.uid), {
-      hiddenByAmy: !r.hiddenByAmy,
-    })
+    try {
+      await updateDoc(doc(db, 'servings', servingId, 'ratings', r.uid), {
+        hiddenByAmy: !r.hiddenByAmy,
+      })
+    } catch (err) {
+      alert(err instanceof Error ? err.message : 'Could not update rating')
+    }
   }
 
   if (loading) return null
 
   const visible = ratings.filter((r) => isAmy || !r.hiddenByAmy)
-  const avg = ratings.length
-    ? ratings.reduce((acc, r) => acc + r.stars, 0) / ratings.length
+  // Average and count exclude hidden ratings so a hidden rating
+  // doesn't silently skew the displayed score.
+  const countable = ratings.filter((r) => !r.hiddenByAmy)
+  const avg = countable.length
+    ? countable.reduce((acc, r) => acc + r.stars, 0) / countable.length
     : 0
 
   return (
@@ -61,10 +68,10 @@ export function RatingsList({ servingId }: Props) {
       <div className="card flex items-center justify-between">
         <div>
           <div className="text-3xl font-display font-bold">
-            {ratings.length ? avg.toFixed(1) : '—'}
+            {countable.length ? avg.toFixed(1) : '—'}
           </div>
           <div className="text-xs text-ink-500">
-            {ratings.length} rating{ratings.length === 1 ? '' : 's'}
+            {countable.length} rating{countable.length === 1 ? '' : 's'}
           </div>
         </div>
         <StarRating value={Math.round(avg)} size="md" />

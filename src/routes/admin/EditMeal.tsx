@@ -76,8 +76,12 @@ export function EditMeal() {
     if (!confirm('Delete this meal from the library? Past servings of it will show "Unknown meal".')) {
       return
     }
-    await deleteDoc(doc(db, 'mealLibrary', docId))
-    navigate('/meals', { replace: true })
+    try {
+      await deleteDoc(doc(db, 'mealLibrary', docId))
+      navigate('/meals', { replace: true })
+    } catch (err) {
+      alert(err instanceof Error ? err.message : 'Could not delete meal')
+    }
   }
 
   if (loading) return <Loading />

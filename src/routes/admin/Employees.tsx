@@ -37,7 +37,11 @@ export function Employees() {
   }, [])
 
   async function setStatus(uid: string, status: UserStatus) {
-    await updateDoc(doc(db, 'users', uid), { status })
+    try {
+      await updateDoc(doc(db, 'users', uid), { status })
+    } catch (err) {
+      alert(err instanceof Error ? err.message : 'Could not update status')
+    }
   }
 
   const pending = users.filter((u) => u.status === 'pending')

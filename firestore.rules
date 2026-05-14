@@ -15,10 +15,22 @@ service cloud.firestore {
       // names alongside ratings); Amy can also read pending sign-ups.
       allow read: if isSelf(uid) || isApproved();
 
-      // First-time create must be self, employee, pending (no privilege escalation).
+      // First-time create must be self, employee, pending (no privilege
+      // escalation). Exception: a hardcoded admin email may create its
+      // own doc as approved admin — this is the defensive bootstrap
+      // for when Firebase account-linking misses (e.g. an admin's
+      // Google sign-in gets a fresh UID instead of linking to their
+      // existing email-link account). Keep this list in sync with
+      // ADMIN_EMAILS in src/lib/allowedDomains.ts.
       allow create: if isSelf(uid)
-        && request.resource.data.role == 'employee'
-        && request.resource.data.status == 'pending';
+        && (
+          (request.resource.data.role == 'employee'
+            && request.resource.data.status == 'pending')
+          ||
+          (request.auth.token.email in ['sbezner@gmail.com', 'abezner@gmail.com']
+            && request.resource.data.role == 'amy'
+            && request.resource.data.status == 'approved')
+        );
 
       // Self can only update displayName (role + status are immutable from client).
       allow update: if isAmy()

@@ -3,7 +3,9 @@ import {
   GoogleAuthProvider,
   sendSignInLinkToEmail,
   signInWithPopup,
+  signInWithRedirect,
 } from 'firebase/auth'
+import { FirebaseError } from 'firebase/app'
 import { auth } from '../firebase'
 import { useAuth } from './AuthProvider'
 import { ALLOWED_DOMAINS_LABEL, isAllowedEmail } from '../lib/allowedDomains'
@@ -43,17 +45,36 @@ export function SignIn() {
   async function signInWithGoogle() {
     setError(null)
     setSubmitting(true)
+    const provider = new GoogleAuthProvider()
+    provider.setCustomParameters({ prompt: 'select_account' })
     try {
-      const provider = new GoogleAuthProvider()
-      provider.setCustomParameters({ prompt: 'select_account' })
       await signInWithPopup(auth, provider)
       // AuthProvider takes it from here (domain check, doc create, gate)
     } catch (err) {
-      const message =
-        err instanceof Error && err.message
-          ? err.message
-          : 'Could not sign in with Google'
-      setError(message)
+      // Popups don't work in iOS PWAs, some in-app browsers, and a few
+      // privacy modes. Fall back to redirect for the known cases.
+      const code = err instanceof FirebaseError ? err.code : ''
+      const popupFailed =
+        code === 'auth/popup-blocked' ||
+        code === 'auth/popup-closed-by-user' ||
+        code === 'auth/cancelled-popup-request' ||
+        code === 'auth/operation-not-supported-in-this-environment' ||
+        code === 'auth/web-storage-unsupported'
+      if (popupFailed) {
+        try {
+          await signInWithRedirect(auth, provider)
+          // Page navigates away; nothing more to do here.
+          return
+        } catch (redirectErr) {
+          setError(
+            redirectErr instanceof Error
+              ? redirectErr.message
+              : 'Could not sign in with Google',
+          )
+        }
+      } else {
+        setError(err instanceof Error ? err.message : 'Could not sign in with Google')
+      }
     } finally {
       setSubmitting(false)
     }

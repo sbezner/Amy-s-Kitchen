@@ -33,8 +33,12 @@ export function DayDetail() {
   async function handleDelete() {
     if (!serving) return
     if (!confirm('Remove this meal from this date? Ratings will be deleted too.')) return
-    await deleteDoc(doc(db, 'servings', serving.id))
-    navigate('/', { replace: true })
+    try {
+      await deleteDoc(doc(db, 'servings', serving.id))
+      navigate('/', { replace: true })
+    } catch (err) {
+      alert(err instanceof Error ? err.message : 'Could not remove meal')
+    }
   }
 
   return (

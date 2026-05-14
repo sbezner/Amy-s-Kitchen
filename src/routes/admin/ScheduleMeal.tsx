@@ -1,12 +1,13 @@
 import { useState } from 'react'
 import { useNavigate, useParams, Link } from 'react-router-dom'
 import {
-  addDoc,
   collection,
+  deleteDoc,
   doc,
   getDocs,
   query,
   serverTimestamp,
+  setDoc,
   updateDoc,
   where,
 } from 'firebase/firestore'
@@ -26,15 +27,19 @@ export function ScheduleMeal() {
   const d = fromDateKey(date)
 
   async function pick(libraryId: string) {
+    if (!date) return
     setError(null)
     setSaving(true)
     try {
-      // Replace any existing serving on this date so we maintain "one per day".
       const existing = await getDocs(
         query(collection(db, 'servings'), where('servedDate', '==', date)),
       )
+
       if (existing.empty) {
-        await addDoc(collection(db, 'servings'), {
+        // Use the date as a deterministic doc id so two concurrent
+        // schedules on the same day collapse to a single doc instead
+        // of creating duplicates.
+        await setDoc(doc(db, 'servings', date), {
           libraryId,
           servedDate: date,
           notes: notes.trim() || null,
@@ -42,13 +47,36 @@ export function ScheduleMeal() {
         })
       } else {
         const existingDoc = existing.docs[0]
+        const existingLibraryId = existingDoc.data().libraryId
+
+        // If the meal is changing and ratings already exist for the
+        // previous meal, those ratings belong to the previous meal.
+        // Ask before clearing them — otherwise we'd silently reattach
+        // old stars/comments to a different meal.
+        if (existingLibraryId !== libraryId) {
+          const ratingsSnap = await getDocs(
+            collection(db, 'servings', existingDoc.id, 'ratings'),
+          )
+          if (ratingsSnap.size > 0) {
+            const ok = confirm(
+              `This day has ${ratingsSnap.size} rating${
+                ratingsSnap.size === 1 ? '' : 's'
+              } for the previous meal. Switching the meal will clear ${
+                ratingsSnap.size === 1 ? 'it' : 'them'
+              }. Continue?`,
+            )
+            if (!ok) {
+              setSaving(false)
+              return
+            }
+            await Promise.all(ratingsSnap.docs.map((r) => deleteDoc(r.ref)))
+          }
+        }
+
         await updateDoc(doc(db, 'servings', existingDoc.id), {
           libraryId,
           notes: notes.trim() || null,
         })
-        // If we changed which library entry is on this date, delete any leftover
-        // ratings tied to the OLD serving doc — but we're updating in place, so
-        // ratings persist. (Phase 3 stores ratings per serving id.)
       }
       navigate(`/day/${date}`, { replace: true })
     } catch (err) {

@@ -156,11 +156,14 @@ export function Reports() {
   }
 
   const thirtyDaysAgo = thirtyDaysAgoKey()
-  const ratings30 = data.ratings.filter((r) => r.servingDate >= thirtyDaysAgo)
+  // Aggregates exclude hidden ratings so they don't skew the report
+  // averages the way they would if we just counted everything.
+  const countable = data.ratings.filter((r) => !r.hiddenByAmy)
+  const countable30 = countable.filter((r) => r.servingDate >= thirtyDaysAgo)
   const servings30 = data.servings.filter((s) => s.date >= thirtyDaysAgo)
 
-  const allTime = aggregateByLibrary(data.ratings)
-  const last30 = aggregateByLibrary(ratings30)
+  const allTime = aggregateByLibrary(countable)
+  const last30 = aggregateByLibrary(countable30)
 
   return (
     <div className="py-4 space-y-6">

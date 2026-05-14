@@ -38,28 +38,44 @@ export function RequestCard({ request, adminMode = false }: Props) {
   async function toggleUpvote() {
     if (!appUser) return
     const ref = doc(db, 'requests', request.id, 'upvotes', appUser.uid)
-    if (upvoted) {
-      await deleteDoc(ref)
-    } else {
-      await setDoc(ref, { createdAt: serverTimestamp() })
+    try {
+      if (upvoted) {
+        await deleteDoc(ref)
+      } else {
+        await setDoc(ref, { createdAt: serverTimestamp() })
+      }
+    } catch (err) {
+      alert(err instanceof Error ? err.message : 'Could not update your upvote')
     }
   }
 
   async function setStatus(status: Request['status']) {
-    await updateDoc(doc(db, 'requests', request.id), { status })
+    try {
+      await updateDoc(doc(db, 'requests', request.id), { status })
+    } catch (err) {
+      alert(err instanceof Error ? err.message : 'Could not update status')
+    }
   }
 
   async function saveEdit() {
-    await updateDoc(doc(db, 'requests', request.id), {
-      mealName: editName.trim(),
-      notes: editNotes.trim() || null,
-    })
-    setEditing(false)
+    try {
+      await updateDoc(doc(db, 'requests', request.id), {
+        mealName: editName.trim(),
+        notes: editNotes.trim() || null,
+      })
+      setEditing(false)
+    } catch (err) {
+      alert(err instanceof Error ? err.message : 'Could not save changes')
+    }
   }
 
   async function remove() {
     if (!confirm('Delete this request?')) return
-    await deleteDoc(doc(db, 'requests', request.id))
+    try {
+      await deleteDoc(doc(db, 'requests', request.id))
+    } catch (err) {
+      alert(err instanceof Error ? err.message : 'Could not delete request')
+    }
   }
 
   if (editing) {

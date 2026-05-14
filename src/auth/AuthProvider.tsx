@@ -1,9 +1,9 @@
 import { createContext, useCallback, useContext, useEffect, useState, type ReactNode } from 'react'
-import { onAuthStateChanged, signOut, type User } from 'firebase/auth'
+import { getRedirectResult, onAuthStateChanged, signOut, type User } from 'firebase/auth'
 import { doc, getDoc, onSnapshot, serverTimestamp, setDoc } from 'firebase/firestore'
 import { auth, db } from '../firebase'
 import type { AppUser } from '../types'
-import { isAllowedEmail } from '../lib/allowedDomains'
+import { isAdminEmail, isAllowedEmail } from '../lib/allowedDomains'
 
 interface AuthContextValue {
   fbUser: User | null
@@ -32,6 +32,15 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   useEffect(() => {
     let unsubDoc: (() => void) | null = null
 
+    // Resolve any pending redirect sign-in (iOS PWA / popup-blocked path).
+    // We don't need to do anything with the result — onAuthStateChanged
+    // fires regardless. But we must call it so Firebase finishes the
+    // redirect handshake and clears the URL state.
+    getRedirectResult(auth).catch(() => {
+      // Swallow: if there was no pending redirect, this rejects with
+      // a non-error condition that's safe to ignore.
+    })
+
     const unsubAuth = onAuthStateChanged(auth, async (user) => {
       if (unsubDoc) {
         unsubDoc()
@@ -57,11 +66,17 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       const snap = await getDoc(ref)
       if (!snap.exists()) {
         const fallbackName = user.email ? user.email.split('@')[0] : 'Member'
+        // Defensive admin bootstrap: if a known-admin email signs in
+        // with a UID that doesn't have a user doc yet (e.g. Firebase
+        // didn't auto-link Google to their existing email-link
+        // account), create them as admin immediately so they don't
+        // get locked into the pending queue.
+        const admin = isAdminEmail(user.email)
         await setDoc(ref, {
           email: user.email ?? '',
           displayName: user.displayName || fallbackName,
-          role: 'employee',
-          status: 'pending',
+          role: admin ? 'amy' : 'employee',
+          status: admin ? 'approved' : 'pending',
           createdAt: serverTimestamp(),
         })
       }
