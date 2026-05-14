@@ -9,15 +9,14 @@ import { Loading } from './components/Loading'
 import { Layout } from './components/Layout'
 import { Calendar } from './routes/Calendar'
 import { DayDetail } from './routes/DayDetail'
-import { Requests } from './routes/Requests'
+import { Meals } from './routes/Meals'
+import { MealDetail } from './routes/MealDetail'
+import { EditMeal } from './routes/EditMeal'
+import { ScheduleMeal } from './routes/ScheduleMeal'
 import { About } from './routes/About'
 import { Admin } from './routes/Admin'
 import { AdminHome } from './routes/admin/AdminHome'
-import { MealLibrary } from './routes/admin/MealLibrary'
-import { EditMeal } from './routes/admin/EditMeal'
-import { ScheduleMeal } from './routes/admin/ScheduleMeal'
 import { Employees } from './routes/admin/Employees'
-import { RequestsAdmin } from './routes/admin/RequestsAdmin'
 import { Reports } from './routes/admin/Reports'
 import { Poster } from './routes/admin/Poster'
 
@@ -47,17 +46,16 @@ export function App() {
           >
             <Route index element={<Calendar />} />
             <Route path="day/:date" element={<DayDetail />} />
-            <Route path="requests" element={<Requests />} />
-            <Route path="meals" element={<MealLibrary />} />
+            <Route path="meals" element={<Meals />} />
             <Route path="meals/new" element={<EditMeal />} />
-            <Route path="meals/:id" element={<EditMeal />} />
+            <Route path="meals/:id" element={<MealDetail />} />
+            <Route path="meals/:id/edit" element={<EditMeal />} />
             <Route path="schedule/:date" element={<ScheduleMeal />} />
             <Route path="reports" element={<Reports />} />
             <Route path="about" element={<About />} />
             <Route path="admin" element={<Admin />}>
               <Route index element={<AdminHome />} />
               <Route path="employees" element={<Employees />} />
-              <Route path="requests" element={<RequestsAdmin />} />
               <Route path="poster" element={<Poster />} />
             </Route>
           </Route>

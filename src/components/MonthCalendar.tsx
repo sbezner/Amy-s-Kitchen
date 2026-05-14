@@ -87,7 +87,7 @@ export function MonthCalendar({ year, month, onChangeMonth }: Props) {
             <button
               key={key}
               type="button"
-              onClick={() => navigate(`/day/${key}`)}
+              onClick={() => navigate(entry ? `/meals/${entry.id}` : `/day/${key}`)}
               className={`aspect-square rounded-2xl flex flex-col items-center justify-start p-1 text-sm transition relative ${
                 inMonth ? 'bg-cream-50' : 'bg-transparent text-ink-500/40'
               } ${today ? 'ring-2 ring-terracotta-500' : ''} active:scale-95`}
@@ -97,9 +97,9 @@ export function MonthCalendar({ year, month, onChangeMonth }: Props) {
               </span>
               {entry && (
                 <div className="flex-1 w-full mt-0.5 flex items-end justify-center overflow-hidden">
-                  {entry.photoUrl ? (
+                  {entry.photos[0] ? (
                     <img
-                      src={entry.photoUrl}
+                      src={entry.photos[0]}
                       alt=""
                       className="w-full h-full object-cover rounded-lg"
                     />

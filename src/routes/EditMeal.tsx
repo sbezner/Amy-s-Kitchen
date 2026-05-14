@@ -2,27 +2,24 @@ import { useState, useEffect, type FormEvent } from 'react'
 import { useNavigate, useParams } from 'react-router-dom'
 import {
   collection,
-  deleteDoc,
   doc,
   getDoc,
   serverTimestamp,
   setDoc,
 } from 'firebase/firestore'
-import { db } from '../../firebase'
-import { useAuth } from '../../auth/AuthProvider'
-import { DietaryTagPicker } from '../../components/DietaryTagChips'
-import { PhotoUpload } from '../../components/PhotoUpload'
-import { Loading } from '../../components/Loading'
-import type { DietaryTag } from '../../types'
+import { db } from '../firebase'
+import { useAuth } from '../auth/AuthProvider'
+import { DietaryTagPicker } from '../components/DietaryTagChips'
+import { MultiPhotoUpload } from '../components/MultiPhotoUpload'
+import { Loading } from '../components/Loading'
+import type { DietaryTag } from '../types'
 
 export function EditMeal() {
   const { id } = useParams<{ id: string }>()
   const navigate = useNavigate()
   const { appUser } = useAuth()
-  const isAmy = appUser?.role === 'amy'
   const isNew = !id
 
-  // For new meals we pre-generate an ID so the photo upload has a stable path.
   const [docId] = useState(() => id ?? doc(collection(db, 'mealLibrary')).id)
   const [loading, setLoading] = useState(!isNew)
   const [saving, setSaving] = useState(false)
@@ -30,7 +27,7 @@ export function EditMeal() {
 
   const [name, setName] = useState('')
   const [description, setDescription] = useState('')
-  const [photoUrl, setPhotoUrl] = useState<string | undefined>(undefined)
+  const [photos, setPhotos] = useState<string[]>([])
   const [tags, setTags] = useState<DietaryTag[]>([])
 
   useEffect(() => {
@@ -41,7 +38,13 @@ export function EditMeal() {
         const d = snap.data()
         setName(d.name ?? '')
         setDescription(d.description ?? '')
-        setPhotoUrl(d.photoUrl)
+        // Backfill from legacy photoUrl if photos[] is absent.
+        const next: string[] = Array.isArray(d.photos)
+          ? d.photos.filter((p: unknown): p is string => typeof p === 'string')
+          : d.photoUrl
+            ? [d.photoUrl as string]
+            : []
+        setPhotos(next)
         setTags((d.dietaryTags ?? []) as DietaryTag[])
       }
       setLoading(false)
@@ -55,32 +58,31 @@ export function EditMeal() {
     try {
       await setDoc(
         doc(db, 'mealLibrary', docId),
-        {
-          name: name.trim(),
-          description: description.trim(),
-          photoUrl: photoUrl ?? null,
-          dietaryTags: tags,
-          createdAt: serverTimestamp(),
-        },
+        isNew
+          ? {
+              name: name.trim(),
+              description: description.trim(),
+              photos,
+              dietaryTags: tags,
+              createdAt: serverTimestamp(),
+              createdBy: appUser?.uid ?? null,
+              // Explicit null clears legacy photoUrl on any future writes.
+              photoUrl: null,
+            }
+          : {
+              name: name.trim(),
+              description: description.trim(),
+              photos,
+              dietaryTags: tags,
+              photoUrl: null,
+            },
         { merge: true },
       )
-      navigate('/meals', { replace: true })
+      navigate(`/meals/${docId}`, { replace: true })
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Save failed')
     } finally {
       setSaving(false)
-    }
-  }
-
-  async function handleDelete() {
-    if (!confirm('Delete this meal from the library? Past servings of it will show "Unknown meal".')) {
-      return
-    }
-    try {
-      await deleteDoc(doc(db, 'mealLibrary', docId))
-      navigate('/meals', { replace: true })
-    } catch (err) {
-      alert(err instanceof Error ? err.message : 'Could not delete meal')
     }
   }
 
@@ -127,8 +129,11 @@ export function EditMeal() {
         </div>
 
         <div>
-          <div className="label">Photo</div>
-          <PhotoUpload libraryId={docId} currentUrl={photoUrl} onChange={setPhotoUrl} />
+          <div className="label">Photos</div>
+          <p className="text-xs text-ink-500 mb-2">
+            Up to 6. The first one is the primary — it shows up on the calendar and meal lists.
+          </p>
+          <MultiPhotoUpload libraryId={docId} photos={photos} onChange={setPhotos} />
         </div>
 
         <div>
@@ -146,16 +151,6 @@ export function EditMeal() {
       <button type="submit" className="btn-primary w-full" disabled={saving || !name.trim()}>
         {saving ? 'Saving…' : 'Save'}
       </button>
-
-      {!isNew && isAmy && (
-        <button
-          type="button"
-          className="btn-ghost w-full text-terracotta-700"
-          onClick={handleDelete}
-        >
-          Delete from library
-        </button>
-      )}
     </form>
   )
 }

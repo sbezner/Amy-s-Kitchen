@@ -10,22 +10,21 @@ interface RatingDoc {
   stars: number
   comment?: string
   hiddenByAmy?: boolean
-  raterDisplayName: string
   updatedAt: number
 }
 
 interface Props {
-  servingId: string
+  mealId: string
 }
 
-export function RatingsList({ servingId }: Props) {
+export function RatingsList({ mealId }: Props) {
   const { appUser } = useAuth()
   const isAmy = appUser?.role === 'amy'
   const [ratings, setRatings] = useState<RatingDoc[]>([])
   const [loading, setLoading] = useState(true)
 
   useEffect(() => {
-    const col = collection(db, 'servings', servingId, 'ratings')
+    const col = collection(db, 'mealLibrary', mealId, 'ratings')
     return onSnapshot(col, (snap) => {
       const list: RatingDoc[] = snap.docs.map((d) => {
         const data = d.data()
@@ -34,7 +33,6 @@ export function RatingsList({ servingId }: Props) {
           stars: data.stars,
           comment: data.comment,
           hiddenByAmy: data.hiddenByAmy ?? false,
-          raterDisplayName: data.raterDisplayName ?? 'Member',
           updatedAt: data.updatedAt?.toMillis?.() ?? 0,
         }
       })
@@ -42,11 +40,11 @@ export function RatingsList({ servingId }: Props) {
       setRatings(list)
       setLoading(false)
     })
-  }, [servingId])
+  }, [mealId])
 
   async function toggleHidden(r: RatingDoc) {
     try {
-      await updateDoc(doc(db, 'servings', servingId, 'ratings', r.uid), {
+      await updateDoc(doc(db, 'mealLibrary', mealId, 'ratings', r.uid), {
         hiddenByAmy: !r.hiddenByAmy,
       })
     } catch (err) {
@@ -57,8 +55,6 @@ export function RatingsList({ servingId }: Props) {
   if (loading) return null
 
   const visible = ratings.filter((r) => isAmy || !r.hiddenByAmy)
-  // Average and count exclude hidden ratings so a hidden rating
-  // doesn't silently skew the displayed score.
   const countable = ratings.filter((r) => !r.hiddenByAmy)
   const avg = countable.length
     ? countable.reduce((acc, r) => acc + r.stars, 0) / countable.length
@@ -103,7 +99,7 @@ function RatingRow({
   isAmy: boolean
   onToggleHidden: () => void
 }) {
-  const displayName = useDisplayName(rating.uid, rating.raterDisplayName)
+  const displayName = useDisplayName(rating.uid)
   return (
     <div
       className={`card ${rating.hiddenByAmy ? 'opacity-60 border border-dashed border-ink-500/30' : ''}`}

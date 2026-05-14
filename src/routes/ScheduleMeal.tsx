@@ -11,9 +11,9 @@ import {
   updateDoc,
   where,
 } from 'firebase/firestore'
-import { db } from '../../firebase'
-import { useMealLibrary } from '../../lib/db'
-import { formatDateHeading, fromDateKey, isFuture, isValidDateKey } from '../../lib/dates'
+import { db } from '../firebase'
+import { useMealLibrary } from '../lib/db'
+import { formatDateHeading, fromDateKey, isFuture, isValidDateKey } from '../lib/dates'
 
 export function ScheduleMeal() {
   const { date } = useParams<{ date: string }>()
@@ -149,9 +149,9 @@ export function ScheduleMeal() {
             disabled={saving}
             onClick={() => pick(entry.id)}
           >
-            {entry.photoUrl ? (
+            {entry.photos[0] ? (
               <img
-                src={entry.photoUrl}
+                src={entry.photos[0]}
                 alt=""
                 className="w-16 h-16 object-cover rounded-2xl shrink-0"
               />

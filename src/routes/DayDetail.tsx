@@ -6,8 +6,6 @@ import { useLibraryEntry, useServingByDate } from '../lib/db'
 import { fromDateKey, formatDateHeading, isFuture, isValidDateKey } from '../lib/dates'
 import { DietaryTagChips } from '../components/DietaryTagChips'
 import { Loading } from '../components/Loading'
-import { RatingForm } from '../components/RatingForm'
-import { RatingsList } from '../components/RatingsList'
 import { LookingForwardButton } from '../components/LookingForwardButton'
 
 export function DayDetail() {
@@ -21,20 +19,22 @@ export function DayDetail() {
 
   if (!date || !isValidDateKey(date)) {
     return (
-      <Navigation message={date ? `"${date}" isn't a valid date.` : 'Pick a date from the calendar.'} />
+      <div className="py-4">
+        <div className="card text-ink-700">
+          {date ? `"${date}" isn't a valid date.` : 'Pick a date from the calendar.'}
+        </div>
+      </div>
     )
   }
 
   const d = fromDateKey(date)
   const future = isFuture(d)
 
-  if (serving === undefined) {
-    return <Loading />
-  }
+  if (serving === undefined) return <Loading />
 
-  async function handleDelete() {
+  async function handleRemove() {
     if (!serving) return
-    if (!confirm('Remove this meal from this date? Ratings will be deleted too.')) return
+    if (!confirm('Remove this meal from this date?')) return
     try {
       await deleteDoc(doc(db, 'servings', serving.id))
       navigate('/', { replace: true })
@@ -56,8 +56,8 @@ export function DayDetail() {
 
       {serving === null && (
         <div className="card">
-          <p className="text-ink-700">No meal scheduled for this day.</p>
-          <Link to={`/schedule/${date}`} className="btn-primary mt-4 w-full">
+          <p className="text-ink-700 mb-3">No meal scheduled for this day.</p>
+          <Link to={`/schedule/${date}`} className="btn-primary w-full">
             Schedule a meal
           </Link>
         </div>
@@ -65,13 +65,14 @@ export function DayDetail() {
 
       {serving && (
         <>
-          {entry?.photoUrl && (
+          {entry?.photos[0] && (
             <img
-              src={entry.photoUrl}
+              src={entry.photos[0]}
               alt=""
               className="w-full aspect-[4/3] object-cover rounded-3xl shadow-soft"
             />
           )}
+
           <div className="card">
             <h3 className="text-2xl mb-2">{entry?.name ?? 'Meal'}</h3>
             {entry && entry.dietaryTags.length > 0 && (
@@ -79,48 +80,33 @@ export function DayDetail() {
                 <DietaryTagChips tags={entry.dietaryTags} />
               </div>
             )}
-            {entry?.description && (
-              <p className="text-ink-700 whitespace-pre-wrap">{entry.description}</p>
-            )}
             {serving.notes && (
-              <p className="mt-3 text-sm text-ink-500 italic">{serving.notes}</p>
+              <p className="text-sm text-ink-500 italic">{serving.notes}</p>
+            )}
+            {entry && (
+              <Link
+                to={`/meals/${entry.id}`}
+                className="btn-primary w-full mt-4 inline-block text-center"
+              >
+                View meal · rate it →
+              </Link>
             )}
           </div>
 
+          {future && <LookingForwardButton servingId={serving.id} />}
+
           <div className="card space-y-2">
-            <Link
-              to={`/schedule/${date}`}
-              className="btn-secondary w-full"
-            >
+            <Link to={`/schedule/${date}`} className="btn-secondary w-full">
               Change which meal
             </Link>
             {isAmy && (
-              <button className="btn-ghost w-full text-terracotta-700" onClick={handleDelete}>
+              <button className="btn-ghost w-full text-terracotta-700" onClick={handleRemove}>
                 Remove from this date
               </button>
             )}
           </div>
-
-          {future ? (
-            <LookingForwardButton servingId={serving.id} />
-          ) : (
-            <>
-              <RatingForm servingId={serving.id} />
-              <RatingsList servingId={serving.id} />
-            </>
-          )}
         </>
       )}
-    </div>
-  )
-}
-
-function Navigation({ message }: { message: string }) {
-  return (
-    <div className="py-4">
-      <div className="card">
-        <p className="text-ink-700">{message}</p>
-      </div>
     </div>
   )
 }

@@ -1,36 +1,28 @@
 import { useEffect, useMemo, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
-import { collection, getDocs, query, where } from 'firebase/firestore'
+import { collection, getDocs } from 'firebase/firestore'
 import { db } from '../../firebase'
 import { useMealLibrary } from '../../lib/db'
 import { useUsers } from '../../lib/users'
-import { todayKey, toDateKey, fromDateKey, formatDateHeading } from '../../lib/dates'
+import { todayKey, toDateKey } from '../../lib/dates'
 import { Loading } from '../../components/Loading'
 import { StarRating } from '../../components/StarRating'
 import type { MealLibraryEntry } from '../../types'
 
 interface RatingRow {
-  servingId: string
-  servingDate: string
-  libraryId: string
+  mealId: string
   uid: string
-  raterDisplayName: string
   stars: number
   comment: string
   hiddenByAmy: boolean
+  updatedAt: number
 }
 
-interface ServingMeta {
-  id: string
-  date: string
-  libraryId: string
+interface MealAggregate {
+  mealId: string
+  servingsCount: number
+  lastServedDate: string | null
   ratingsCount: number
-  avgStars: number
-}
-
-interface LibraryAggregate {
-  libraryId: string
-  count: number
   avgStars: number
 }
 
@@ -40,82 +32,76 @@ function thirtyDaysAgoKey(): string {
   return toDateKey(d)
 }
 
-async function fetchAllPastData() {
-  const today = todayKey()
-  const servingsSnap = await getDocs(
-    query(collection(db, 'servings'), where('servedDate', '<=', today)),
-  )
+async function fetchAll() {
+  const [mealsSnap, servingsSnap] = await Promise.all([
+    getDocs(collection(db, 'mealLibrary')),
+    getDocs(collection(db, 'servings')),
+  ])
 
-  const ratingsPromises = servingsSnap.docs.map(async (servingDoc) => {
-    const ratingsSnap = await getDocs(collection(db, 'servings', servingDoc.id, 'ratings'))
-    return { servingDoc, ratingsSnap }
-  })
-
-  const results = await Promise.all(ratingsPromises)
-
-  const ratings: RatingRow[] = []
-  const servings: ServingMeta[] = []
-
-  for (const { servingDoc, ratingsSnap } of results) {
-    const sData = servingDoc.data()
-    const libraryId = sData.libraryId
-    const date = sData.servedDate
-    const servingRatings = ratingsSnap.docs.map((d) => {
-      const data = d.data()
-      return {
-        servingId: servingDoc.id,
-        servingDate: date,
-        libraryId,
-        uid: d.id,
-        raterDisplayName: data.raterDisplayName ?? 'Member',
-        stars: data.stars ?? 0,
-        comment: data.comment ?? '',
-        hiddenByAmy: Boolean(data.hiddenByAmy),
-      }
-    })
-    ratings.push(...servingRatings)
-    const sum = servingRatings.reduce((a, r) => a + r.stars, 0)
-    servings.push({
-      id: servingDoc.id,
-      date,
-      libraryId,
-      ratingsCount: servingRatings.length,
-      avgStars: servingRatings.length ? sum / servingRatings.length : 0,
-    })
-  }
-
-  return { ratings, servings }
-}
-
-async function fetchActiveEmployeeCount(): Promise<number> {
-  const snap = await getDocs(
-    query(collection(db, 'users'), where('status', '==', 'approved')),
-  )
-  // Active employees who can rate = approved users who aren't Amy.
-  return snap.docs.filter((d) => d.data().role !== 'amy').length
-}
-
-function aggregateByLibrary(rows: RatingRow[]): LibraryAggregate[] {
-  const map = new Map<string, { count: number; sum: number }>()
-  for (const r of rows) {
-    const cur = map.get(r.libraryId) ?? { count: 0, sum: 0 }
+  // Servings per meal id.
+  const servingsByMeal = new Map<string, { count: number; lastDate: string | null }>()
+  for (const d of servingsSnap.docs) {
+    const data = d.data()
+    const lib = data.libraryId as string | undefined
+    const date = data.servedDate as string | undefined
+    if (!lib || !date) continue
+    const cur = servingsByMeal.get(lib) ?? { count: 0, lastDate: null as string | null }
     cur.count += 1
-    cur.sum += r.stars
-    map.set(r.libraryId, cur)
+    if (!cur.lastDate || date > cur.lastDate) cur.lastDate = date
+    servingsByMeal.set(lib, cur)
   }
-  return Array.from(map.entries()).map(([libraryId, v]) => ({
-    libraryId,
-    count: v.count,
-    avgStars: v.sum / v.count,
-  }))
+
+  // All ratings, across all meals.
+  const ratings: RatingRow[] = []
+  const ratingsByMeal = new Map<string, RatingRow[]>()
+  await Promise.all(
+    mealsSnap.docs.map(async (mealDoc) => {
+      const rSnap = await getDocs(collection(db, 'mealLibrary', mealDoc.id, 'ratings'))
+      const rows = rSnap.docs.map((r) => ({
+        mealId: mealDoc.id,
+        uid: r.id,
+        stars: (r.data().stars as number) ?? 0,
+        comment: (r.data().comment as string) ?? '',
+        hiddenByAmy: Boolean(r.data().hiddenByAmy),
+        updatedAt: r.data().updatedAt?.toMillis?.() ?? 0,
+      }))
+      ratings.push(...rows)
+      ratingsByMeal.set(mealDoc.id, rows)
+    }),
+  )
+
+  return { ratings, ratingsByMeal, servingsByMeal }
+}
+
+function aggregate(
+  mealIds: Iterable<string>,
+  ratingsByMeal: Map<string, RatingRow[]>,
+  servingsByMeal: Map<string, { count: number; lastDate: string | null }>,
+): MealAggregate[] {
+  const out: MealAggregate[] = []
+  for (const id of mealIds) {
+    const ratings = (ratingsByMeal.get(id) ?? []).filter((r) => !r.hiddenByAmy)
+    const servings = servingsByMeal.get(id)
+    out.push({
+      mealId: id,
+      servingsCount: servings?.count ?? 0,
+      lastServedDate: servings?.lastDate ?? null,
+      ratingsCount: ratings.length,
+      avgStars: ratings.length ? ratings.reduce((acc, r) => acc + r.stars, 0) / ratings.length : 0,
+    })
+  }
+  return out
 }
 
 export function Reports() {
   const navigate = useNavigate()
   const { library } = useMealLibrary()
   const { users } = useUsers()
-  const [data, setData] = useState<{ ratings: RatingRow[]; servings: ServingMeta[] } | null>(null)
-  const [activeCount, setActiveCount] = useState<number>(0)
+  const [data, setData] = useState<{
+    ratings: RatingRow[]
+    ratingsByMeal: Map<string, RatingRow[]>
+    servingsByMeal: Map<string, { count: number; lastDate: string | null }>
+  } | null>(null)
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
 
@@ -123,16 +109,10 @@ export function Reports() {
     let cancelled = false
     void (async () => {
       try {
-        const [{ ratings, servings }, count] = await Promise.all([
-          fetchAllPastData(),
-          fetchActiveEmployeeCount(),
-        ])
-        if (cancelled) return
-        setData({ ratings, servings })
-        setActiveCount(count)
+        const result = await fetchAll()
+        if (!cancelled) setData(result)
       } catch (err) {
-        if (cancelled) return
-        setError(err instanceof Error ? err.message : 'Failed to load reports')
+        if (!cancelled) setError(err instanceof Error ? err.message : 'Failed to load reports')
       } finally {
         if (!cancelled) setLoading(false)
       }
@@ -143,9 +123,9 @@ export function Reports() {
   }, [])
 
   const libraryById = useMemo(() => {
-    const map = new Map<string, MealLibraryEntry>()
-    for (const e of library) map.set(e.id, e)
-    return map
+    const m = new Map<string, MealLibraryEntry>()
+    for (const e of library) m.set(e.id, e)
+    return m
   }, [library])
 
   if (loading) return <Loading label="Crunching the numbers…" />
@@ -157,15 +137,16 @@ export function Reports() {
     )
   }
 
-  const thirtyDaysAgo = thirtyDaysAgoKey()
-  // Aggregates exclude hidden ratings so they don't skew the report
-  // averages the way they would if we just counted everything.
-  const countable = data.ratings.filter((r) => !r.hiddenByAmy)
-  const countable30 = countable.filter((r) => r.servingDate >= thirtyDaysAgo)
-  const servings30 = data.servings.filter((s) => s.date >= thirtyDaysAgo)
+  const thirty = thirtyDaysAgoKey()
+  const allServedMealIds = new Set<string>()
+  const recentMealIds = new Set<string>()
+  for (const [mealId, info] of data.servingsByMeal) {
+    if (info.count > 0) allServedMealIds.add(mealId)
+    if (info.lastDate && info.lastDate >= thirty) recentMealIds.add(mealId)
+  }
 
-  const allTime = aggregateByLibrary(countable)
-  const last30 = aggregateByLibrary(countable30)
+  const allAgg = aggregate(allServedMealIds, data.ratingsByMeal, data.servingsByMeal)
+  const last30Agg = aggregate(recentMealIds, data.ratingsByMeal, data.servingsByMeal)
 
   return (
     <div className="py-4 space-y-6">
@@ -182,80 +163,67 @@ export function Reports() {
         </button>
       </div>
 
-      <ReportSection
+      <Section
         title="Last 30 days"
-        aggregates={last30}
-        servings={servings30}
-        activeCount={activeCount}
+        aggregates={last30Agg}
         libraryById={libraryById}
+        emptyMsg="No meals served in the last 30 days."
       />
 
-      <ReportSection
+      <Section
         title="All time"
-        aggregates={allTime}
-        servings={data.servings}
-        activeCount={activeCount}
+        aggregates={allAgg}
         libraryById={libraryById}
+        emptyMsg="No meals served yet."
       />
     </div>
   )
 }
 
-function ReportSection({
+function Section({
   title,
   aggregates,
-  servings,
-  activeCount,
   libraryById,
+  emptyMsg,
 }: {
   title: string
-  aggregates: LibraryAggregate[]
-  servings: ServingMeta[]
-  activeCount: number
+  aggregates: MealAggregate[]
   libraryById: Map<string, MealLibraryEntry>
+  emptyMsg: string
 }) {
-  const eligible = aggregates.filter((a) => a.count >= 2)
+  if (aggregates.length === 0) {
+    return (
+      <section>
+        <h3 className="text-xl mb-2">{title}</h3>
+        <div className="card text-sm text-ink-500">{emptyMsg}</div>
+      </section>
+    )
+  }
+
+  const eligible = aggregates.filter((a) => a.ratingsCount >= 2)
   const mostLiked = [...eligible].sort((a, b) => b.avgStars - a.avgStars).slice(0, 5)
   const leastLiked = [...eligible].sort((a, b) => a.avgStars - b.avgStars).slice(0, 5)
-  const threshold = Math.max(1, Math.ceil(activeCount * 0.5))
-  const needsAttention = activeCount > 0
-    ? servings.filter((s) => s.ratingsCount < threshold).sort((a, b) => b.date.localeCompare(a.date)).slice(0, 5)
-    : []
+  const mostFrequent = [...aggregates].sort((a, b) => b.servingsCount - a.servingsCount).slice(0, 5)
 
   return (
     <section className="space-y-3">
       <h3 className="text-xl">{title}</h3>
 
-      <SubBlock label="Most liked" empty="Not enough ratings yet (need 2+ per meal).">
+      <SubBlock label="Most liked" empty="Need at least 2 ratings to rank.">
         {mostLiked.map((a) => (
-          <AggregateRow key={a.libraryId} a={a} libraryById={libraryById} />
+          <AggregateRow key={a.mealId} a={a} libraryById={libraryById} />
         ))}
       </SubBlock>
 
-      <SubBlock label="Least liked" empty="Not enough ratings yet (need 2+ per meal).">
+      <SubBlock label="Least liked" empty="Need at least 2 ratings to rank.">
         {leastLiked.map((a) => (
-          <AggregateRow key={a.libraryId} a={a} libraryById={libraryById} />
+          <AggregateRow key={a.mealId} a={a} libraryById={libraryById} />
         ))}
       </SubBlock>
 
-      <SubBlock
-        label={`Needs attention · fewer than ${threshold} ratings`}
-        empty={activeCount === 0 ? 'No active employees on the roster yet.' : 'Every meal got a good response.'}
-      >
-        {needsAttention.map((s) => (
-          <div key={s.id} className="card flex items-center justify-between">
-            <div>
-              <div className="font-semibold">
-                {libraryById.get(s.libraryId)?.name ?? 'Unknown meal'}
-              </div>
-              <div className="text-xs text-ink-500">
-                {formatDateHeading(fromDateKey(s.date))} ·{' '}
-                {s.ratingsCount === 0
-                  ? 'no ratings'
-                  : `${s.ratingsCount} / ${activeCount} employees rated`}
-              </div>
-            </div>
-          </div>
+      <SubBlock label="Most frequent" empty="Nothing on the calendar yet.">
+        {mostFrequent.map((a) => (
+          <AggregateRow key={a.mealId} a={a} libraryById={libraryById} />
         ))}
       </SubBlock>
     </section>
@@ -286,14 +254,15 @@ function AggregateRow({
   a,
   libraryById,
 }: {
-  a: LibraryAggregate
+  a: MealAggregate
   libraryById: Map<string, MealLibraryEntry>
 }) {
-  const entry = libraryById.get(a.libraryId)
+  const entry = libraryById.get(a.mealId)
+  const photo = entry?.photos[0]
   return (
     <div className="card flex items-center gap-3">
-      {entry?.photoUrl ? (
-        <img src={entry.photoUrl} alt="" className="w-12 h-12 rounded-xl object-cover shrink-0" />
+      {photo ? (
+        <img src={photo} alt="" className="w-12 h-12 rounded-xl object-cover shrink-0" />
       ) : (
         <div className="w-12 h-12 rounded-xl bg-cream-100 shrink-0 flex items-center justify-center text-xl">
           🍽️
@@ -302,11 +271,14 @@ function AggregateRow({
       <div className="flex-1 min-w-0">
         <div className="font-semibold truncate">{entry?.name ?? 'Unknown meal'}</div>
         <div className="text-xs text-ink-500">
-          {a.count} rating{a.count === 1 ? '' : 's'}
+          {a.servingsCount > 0 && `served ${a.servingsCount}× · `}
+          {a.ratingsCount} rating{a.ratingsCount === 1 ? '' : 's'}
         </div>
       </div>
       <div className="flex flex-col items-end">
-        <div className="font-display font-bold text-xl">{a.avgStars.toFixed(1)}</div>
+        <div className="font-display font-bold text-xl">
+          {a.ratingsCount > 0 ? a.avgStars.toFixed(1) : '—'}
+        </div>
         <StarRating value={Math.round(a.avgStars)} size="sm" />
       </div>
     </div>
@@ -318,19 +290,19 @@ function downloadCsv(
   libraryById: Map<string, MealLibraryEntry>,
   users: Map<string, { displayName: string }>,
 ) {
-  const header = ['date', 'meal', 'employee', 'stars', 'comment', 'hidden']
+  const header = ['meal', 'employee', 'stars', 'comment', 'hidden', 'updated']
   const escape = (s: string) => `"${(s ?? '').replace(/"/g, '""')}"`
   const rows = ratings
     .slice()
-    .sort((a, b) => a.servingDate.localeCompare(b.servingDate))
+    .sort((a, b) => b.updatedAt - a.updatedAt)
     .map((r) =>
       [
-        r.servingDate,
-        libraryById.get(r.libraryId)?.name ?? 'Unknown',
-        users.get(r.uid)?.displayName || r.raterDisplayName || 'Member',
+        libraryById.get(r.mealId)?.name ?? 'Unknown',
+        users.get(r.uid)?.displayName || 'Member',
         String(r.stars),
         r.comment,
         r.hiddenByAmy ? 'yes' : 'no',
+        r.updatedAt ? new Date(r.updatedAt).toISOString() : '',
       ]
         .map(escape)
         .join(','),

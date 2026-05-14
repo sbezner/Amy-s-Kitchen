@@ -10,6 +10,30 @@ import {
 import { db } from '../firebase'
 import type { MealLibraryEntry, Serving, DietaryTag } from '../types'
 
+function toEntry(id: string, data: Record<string, unknown>): MealLibraryEntry {
+  // Legacy compat: old docs had `photoUrl` (single). Promote to photos[].
+  let photos: string[] = []
+  if (Array.isArray(data.photos)) {
+    photos = data.photos.filter((p): p is string => typeof p === 'string')
+  } else if (typeof data.photoUrl === 'string' && data.photoUrl) {
+    photos = [data.photoUrl]
+  }
+  const createdAtField = data.createdAt as { toMillis?: () => number } | undefined
+  const declinedAtField = data.declinedAt as { toMillis?: () => number } | undefined
+  return {
+    id,
+    name: (data.name as string) ?? '',
+    description: (data.description as string) ?? '',
+    photos,
+    dietaryTags: ((data.dietaryTags as DietaryTag[]) ?? []),
+    createdAt: createdAtField?.toMillis?.() ?? 0,
+    createdBy: data.createdBy as string | undefined,
+    declinedReason: (data.declinedReason as string) || undefined,
+    declinedAt: declinedAtField?.toMillis?.(),
+    declinedBy: data.declinedBy as string | undefined,
+  }
+}
+
 export function useMealLibrary(): { library: MealLibraryEntry[]; loading: boolean } {
   const [library, setLibrary] = useState<MealLibraryEntry[]>([])
   const [loading, setLoading] = useState(true)
@@ -17,19 +41,7 @@ export function useMealLibrary(): { library: MealLibraryEntry[]; loading: boolea
   useEffect(() => {
     const q = query(collection(db, 'mealLibrary'), orderBy('name'))
     return onSnapshot(q, (snap) => {
-      setLibrary(
-        snap.docs.map((d) => {
-          const data = d.data()
-          return {
-            id: d.id,
-            name: data.name ?? '',
-            description: data.description ?? '',
-            photoUrl: data.photoUrl,
-            dietaryTags: (data.dietaryTags ?? []) as DietaryTag[],
-            createdAt: data.createdAt?.toMillis?.() ?? 0,
-          }
-        }),
-      )
+      setLibrary(snap.docs.map((d) => toEntry(d.id, d.data())))
       setLoading(false)
     })
   }, [])
@@ -37,8 +49,9 @@ export function useMealLibrary(): { library: MealLibraryEntry[]; loading: boolea
   return { library, loading }
 }
 
-export function useLibraryEntry(id: string | undefined): MealLibraryEntry | null {
-  const [entry, setEntry] = useState<MealLibraryEntry | null>(null)
+export function useLibraryEntry(id: string | undefined): MealLibraryEntry | null | undefined {
+  // undefined = still loading, null = not found
+  const [entry, setEntry] = useState<MealLibraryEntry | null | undefined>(undefined)
   useEffect(() => {
     if (!id) {
       setEntry(null)
@@ -49,18 +62,21 @@ export function useLibraryEntry(id: string | undefined): MealLibraryEntry | null
         setEntry(null)
         return
       }
-      const data = snap.data()
-      setEntry({
-        id: snap.id,
-        name: data.name ?? '',
-        description: data.description ?? '',
-        photoUrl: data.photoUrl,
-        dietaryTags: (data.dietaryTags ?? []) as DietaryTag[],
-        createdAt: data.createdAt?.toMillis?.() ?? 0,
-      })
+      setEntry(toEntry(snap.id, snap.data()))
     })
   }, [id])
   return entry
+}
+
+function toServing(id: string, data: Record<string, unknown>): Serving {
+  const createdAtField = data.createdAt as { toMillis?: () => number } | undefined
+  return {
+    id,
+    libraryId: (data.libraryId as string) ?? '',
+    servedDate: (data.servedDate as string) ?? id,
+    notes: (data.notes as string) ?? undefined,
+    createdAt: createdAtField?.toMillis?.() ?? 0,
+  }
 }
 
 export function useServingsInRange(start: string, end: string): { servings: Serving[]; loading: boolean } {
@@ -74,18 +90,7 @@ export function useServingsInRange(start: string, end: string): { servings: Serv
       where('servedDate', '<=', end),
     )
     return onSnapshot(q, (snap) => {
-      setServings(
-        snap.docs.map((d) => {
-          const data = d.data()
-          return {
-            id: d.id,
-            libraryId: data.libraryId,
-            servedDate: data.servedDate,
-            notes: data.notes,
-            createdAt: data.createdAt?.toMillis?.() ?? 0,
-          }
-        }),
-      )
+      setServings(snap.docs.map((d) => toServing(d.id, d.data())))
       setLoading(false)
     })
   }, [start, end])
@@ -108,15 +113,46 @@ export function useServingByDate(dateKey: string | undefined): Serving | null | 
         return
       }
       const d = snap.docs[0]
-      const data = d.data()
-      setServing({
-        id: d.id,
-        libraryId: data.libraryId,
-        servedDate: data.servedDate,
-        notes: data.notes,
-        createdAt: data.createdAt?.toMillis?.() ?? 0,
-      })
+      setServing(toServing(d.id, d.data()))
     })
   }, [dateKey])
   return serving
+}
+
+export function useServingsByMealId(libraryId: string | undefined): { servings: Serving[]; loading: boolean } {
+  const [servings, setServings] = useState<Serving[]>([])
+  const [loading, setLoading] = useState(true)
+
+  useEffect(() => {
+    if (!libraryId) {
+      setServings([])
+      setLoading(false)
+      return
+    }
+    const q = query(collection(db, 'servings'), where('libraryId', '==', libraryId))
+    return onSnapshot(q, (snap) => {
+      const list = snap.docs.map((d) => toServing(d.id, d.data()))
+      list.sort((a, b) => b.servedDate.localeCompare(a.servedDate))
+      setServings(list)
+      setLoading(false)
+    })
+  }, [libraryId])
+
+  return { servings, loading }
+}
+
+export function useUpvotes(mealId: string, currentUid?: string) {
+  const [uids, setUids] = useState<string[]>([])
+
+  useEffect(() => {
+    if (!mealId) return
+    return onSnapshot(collection(db, 'mealLibrary', mealId, 'upvotes'), (snap) => {
+      setUids(snap.docs.map((d) => d.id))
+    })
+  }, [mealId])
+
+  return {
+    count: uids.length,
+    upvoted: currentUid ? uids.includes(currentUid) : false,
+  }
 }

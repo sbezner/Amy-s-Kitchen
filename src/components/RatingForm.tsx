@@ -5,10 +5,10 @@ import { useAuth } from '../auth/AuthProvider'
 import { StarRating } from './StarRating'
 
 interface Props {
-  servingId: string
+  mealId: string
 }
 
-export function RatingForm({ servingId }: Props) {
+export function RatingForm({ mealId }: Props) {
   const { appUser } = useAuth()
   const [stars, setStars] = useState(0)
   const [comment, setComment] = useState('')
@@ -19,7 +19,7 @@ export function RatingForm({ servingId }: Props) {
 
   useEffect(() => {
     if (!appUser) return
-    const ref = doc(db, 'servings', servingId, 'ratings', appUser.uid)
+    const ref = doc(db, 'mealLibrary', mealId, 'ratings', appUser.uid)
     return onSnapshot(ref, (snap) => {
       if (snap.exists()) {
         const data = snap.data()
@@ -32,7 +32,7 @@ export function RatingForm({ servingId }: Props) {
         setSavedComment('')
       }
     })
-  }, [appUser, servingId])
+  }, [appUser, mealId])
 
   const dirty = stars !== savedStars || comment !== savedComment
   const lowRating = stars > 0 && stars <= 2
@@ -41,9 +41,7 @@ export function RatingForm({ servingId }: Props) {
     if (!appUser || stars === 0) return
     setSaving(true)
     try {
-      const ref = doc(db, 'servings', servingId, 'ratings', appUser.uid)
-      // We don't store the display name here on purpose — it's
-      // looked up live from the user doc so renames propagate.
+      const ref = doc(db, 'mealLibrary', mealId, 'ratings', appUser.uid)
       await setDoc(
         ref,
         {
@@ -65,7 +63,7 @@ export function RatingForm({ servingId }: Props) {
     if (!appUser) return
     if (!confirm('Remove your rating for this meal?')) return
     try {
-      await deleteDoc(doc(db, 'servings', servingId, 'ratings', appUser.uid))
+      await deleteDoc(doc(db, 'mealLibrary', mealId, 'ratings', appUser.uid))
       setStars(0)
       setComment('')
     } catch (err) {

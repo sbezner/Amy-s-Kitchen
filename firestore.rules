@@ -10,18 +10,11 @@ service cloud.firestore {
     function isSelf(uid) { return isSignedIn() && request.auth.uid == uid; }
 
     match /users/{uid} {
-      // Self can read own doc; any approved user can read other users
-      // (needed for reports/threshold calculations and to show display
-      // names alongside ratings); Amy can also read pending sign-ups.
       allow read: if isSelf(uid) || isApproved();
 
-      // First-time create must be self, employee, pending (no privilege
-      // escalation). Exception: a hardcoded admin email may create its
-      // own doc as approved admin — this is the defensive bootstrap
-      // for when Firebase account-linking misses (e.g. an admin's
-      // Google sign-in gets a fresh UID instead of linking to their
-      // existing email-link account). Keep this list in sync with
-      // ADMIN_EMAILS in src/lib/allowedDomains.ts.
+      // First-time create: employee+pending self, OR known-admin email
+      // self-bootstrapping as approved admin (defensive belt-and-braces
+      // for when Firebase doesn't auto-link Google to email-link UIDs).
       allow create: if isSelf(uid)
         && (
           (request.resource.data.role == 'employee'
@@ -32,7 +25,6 @@ service cloud.firestore {
             && request.resource.data.status == 'approved')
         );
 
-      // Self can only update displayName (role + status are immutable from client).
       allow update: if isAmy()
         || (isSelf(uid)
             && request.resource.data.role == resource.data.role
@@ -44,30 +36,46 @@ service cloud.firestore {
 
     match /mealLibrary/{libId} {
       allow read: if isApproved();
-      // Any approved user can add or edit meals; only Amy can delete.
-      // String length caps prevent multi-megabyte payloads.
-      allow create, update: if isApproved()
+
+      // Anyone approved can add or edit a meal entry. String-length and
+      // photo-array caps keep payloads sane.
+      // Only Amy can set/clear decline fields (declinedReason etc).
+      allow create: if isApproved()
         && request.resource.data.name is string
         && request.resource.data.name.size() <= 120
         && (!('description' in request.resource.data)
             || request.resource.data.description is string
-            && request.resource.data.description.size() <= 2000);
-      allow delete: if isAmy();
-    }
+            && request.resource.data.description.size() <= 2000)
+        && (!('photos' in request.resource.data)
+            || (request.resource.data.photos is list
+                && request.resource.data.photos.size() <= 6))
+        && !('declinedReason' in request.resource.data);
+      allow update: if (isApproved()
+        && request.resource.data.name is string
+        && request.resource.data.name.size() <= 120
+        && (!('description' in request.resource.data)
+            || request.resource.data.description is string
+            && request.resource.data.description.size() <= 2000)
+        && (!('photos' in request.resource.data)
+            || (request.resource.data.photos is list
+                && request.resource.data.photos.size() <= 6))
+        // Non-admins can't touch decline fields.
+        && request.resource.data.get('declinedReason', '') == resource.data.get('declinedReason', '')
+        && request.resource.data.get('declinedBy', '') == resource.data.get('declinedBy', ''))
+        || isAmy();
 
-    match /servings/{servingId} {
-      allow read: if isApproved();
-      // Any approved user can schedule or edit a serving; only Amy can delete.
-      allow create, update: if isApproved()
-        && (!('notes' in request.resource.data)
-            || request.resource.data.notes == null
-            || (request.resource.data.notes is string
-                && request.resource.data.notes.size() <= 500));
-      allow delete: if isAmy();
+      // Only Amy can delete a meal that's been scheduled, but the
+      // creator of a pure-suggestion meal can also delete their own.
+      // The "no servings exist" check is enforced client-side (rules
+      // can't query across collections cheaply); this is acceptable
+      // because an approved user could only orphan their own data.
+      allow delete: if isAmy()
+        || (isApproved()
+            && resource.data.get('createdBy', '') == request.auth.uid);
 
+      // Ratings: 1 per (meal, user). Same shape as before, new home.
       match /ratings/{uid} {
         allow read: if isApproved();
-        // Employee writes their own rating; Amy can hide/unhide and delete.
         allow create: if (isSelf(uid) && isApproved()
                           && request.resource.data.stars is int
                           && request.resource.data.stars >= 1
@@ -89,35 +97,23 @@ service cloud.firestore {
         allow delete: if isSelf(uid) || isAmy();
       }
 
-      match /lookingForward/{uid} {
+      // "Make this again" upvotes — one per (meal, user).
+      match /upvotes/{uid} {
         allow read: if isApproved();
         allow write: if isSelf(uid) && isApproved();
       }
     }
 
-    match /requests/{reqId} {
+    match /servings/{servingId} {
       allow read: if isApproved();
-      allow create: if isApproved()
-        && request.resource.data.requestedBy == request.auth.uid
-        && request.resource.data.mealName is string
-        && request.resource.data.mealName.size() <= 120
+      allow create, update: if isApproved()
         && (!('notes' in request.resource.data)
             || request.resource.data.notes == null
             || (request.resource.data.notes is string
-                && request.resource.data.notes.size() <= 1000));
-      allow update: if isAmy()
-        || (isApproved()
-            && resource.data.requestedBy == request.auth.uid
-            && request.resource.data.requestedBy == resource.data.requestedBy
-            && request.resource.data.mealName is string
-            && request.resource.data.mealName.size() <= 120
-            && (!('notes' in request.resource.data)
-                || request.resource.data.notes == null
-                || (request.resource.data.notes is string
-                    && request.resource.data.notes.size() <= 1000)));
+                && request.resource.data.notes.size() <= 500));
       allow delete: if isAmy();
 
-      match /upvotes/{uid} {
+      match /lookingForward/{uid} {
         allow read: if isApproved();
         allow write: if isSelf(uid) && isApproved();
       }

@@ -25,15 +25,21 @@ export interface MealLibraryEntry {
   id: string
   name: string
   description: string
-  photoUrl?: string
+  /** Ordered list of photo URLs. The first is the primary. */
+  photos: string[]
   dietaryTags: DietaryTag[]
   createdAt: number
+  createdBy?: string
+  /** If set, admin has declined this meal; the reason is visible to everyone. */
+  declinedReason?: string
+  declinedAt?: number
+  declinedBy?: string
 }
 
 export interface Serving {
   id: string
   libraryId: string
-  servedDate: string // YYYY-MM-DD
+  servedDate: string // YYYY-MM-DD; also the doc id for new servings
   notes?: string
   createdAt: number
 }
@@ -44,15 +50,4 @@ export interface Rating {
   comment?: string
   hiddenByAmy?: boolean
   updatedAt: number
-}
-
-export interface Request {
-  id: string
-  requestedBy: string
-  requestedByName: string
-  mealName: string
-  notes?: string
-  status: 'open' | 'scheduled' | 'made' | 'declined'
-  scheduledServingId?: string
-  createdAt: number
 }

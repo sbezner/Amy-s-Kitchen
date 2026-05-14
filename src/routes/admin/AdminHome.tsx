@@ -2,7 +2,6 @@ import { Link } from 'react-router-dom'
 
 const TILES = [
   { to: '/admin/employees', title: 'Employees', body: 'Approve sign-ups and manage the roster.' },
-  { to: '/admin/requests', title: 'Requests', body: 'See what Energized Engines is asking for.' },
   { to: '/admin/poster', title: 'Rollout poster', body: 'Printable QR poster for getting people signed up.' },
 ]
 
