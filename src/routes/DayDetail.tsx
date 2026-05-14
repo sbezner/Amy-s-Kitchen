@@ -51,11 +51,9 @@ export function DayDetail() {
       {serving === null && (
         <div className="card">
           <p className="text-ink-700">No meal scheduled for this day.</p>
-          {isAmy && (
-            <Link to={`/admin/schedule/${date}`} className="btn-primary mt-4 w-full">
-              Schedule a meal
-            </Link>
-          )}
+          <Link to={`/schedule/${date}`} className="btn-primary mt-4 w-full">
+            Schedule a meal
+          </Link>
         </div>
       )}
 
@@ -83,20 +81,19 @@ export function DayDetail() {
             )}
           </div>
 
-          {isAmy && (
-            <div className="card space-y-2">
-              <p className="text-sm font-semibold text-ink-700">Amy</p>
-              <Link
-                to={`/admin/schedule/${date}`}
-                className="btn-secondary w-full"
-              >
-                Change which meal
-              </Link>
+          <div className="card space-y-2">
+            <Link
+              to={`/schedule/${date}`}
+              className="btn-secondary w-full"
+            >
+              Change which meal
+            </Link>
+            {isAmy && (
               <button className="btn-ghost w-full text-terracotta-700" onClick={handleDelete}>
                 Remove from this date
               </button>
-            </div>
-          )}
+            )}
+          </div>
 
           {future ? (
             <LookingForwardButton servingId={serving.id} />

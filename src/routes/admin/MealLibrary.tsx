@@ -9,7 +9,7 @@ export function MealLibrary() {
     <div className="py-4 space-y-3">
       <div className="flex items-center justify-between">
         <h2 className="text-2xl">Meal library</h2>
-        <Link to="/admin/meals/new" className="btn-primary text-sm py-2 px-4">
+        <Link to="/meals/new" className="btn-primary text-sm py-2 px-4">
           + New meal
         </Link>
       </div>
@@ -27,7 +27,7 @@ export function MealLibrary() {
       {library.map((entry) => (
         <Link
           key={entry.id}
-          to={`/admin/meals/${entry.id}`}
+          to={`/meals/${entry.id}`}
           className="card flex gap-4 hover:bg-cream-100/60 transition"
         >
           {entry.photoUrl ? (

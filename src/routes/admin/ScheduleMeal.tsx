@@ -88,7 +88,7 @@ export function ScheduleMeal() {
       <div className="space-y-2">
         <div className="flex items-center justify-between">
           <h3 className="text-lg">Pick from library</h3>
-          <Link to="/admin/meals/new" className="text-sm font-semibold text-terracotta-600">
+          <Link to="/meals/new" className="text-sm font-semibold text-terracotta-600">
             + New meal
           </Link>
         </div>
@@ -98,7 +98,7 @@ export function ScheduleMeal() {
         {!loading && library.length === 0 && (
           <div className="card">
             <p className="text-ink-700 mb-3">No meals in the library yet.</p>
-            <Link to="/admin/meals/new" className="btn-primary w-full">
+            <Link to="/meals/new" className="btn-primary w-full">
               Add your first meal
             </Link>
           </div>

@@ -45,16 +45,16 @@ export function App() {
             <Route index element={<Calendar />} />
             <Route path="day/:date" element={<DayDetail />} />
             <Route path="requests" element={<Requests />} />
+            <Route path="meals" element={<MealLibrary />} />
+            <Route path="meals/new" element={<EditMeal />} />
+            <Route path="meals/:id" element={<EditMeal />} />
+            <Route path="schedule/:date" element={<ScheduleMeal />} />
+            <Route path="reports" element={<Reports />} />
             <Route path="about" element={<About />} />
             <Route path="admin" element={<Admin />}>
               <Route index element={<AdminHome />} />
-              <Route path="meals" element={<MealLibrary />} />
-              <Route path="meals/new" element={<EditMeal />} />
-              <Route path="meals/:id" element={<EditMeal />} />
-              <Route path="schedule/:date" element={<ScheduleMeal />} />
               <Route path="employees" element={<Employees />} />
               <Route path="requests" element={<RequestsAdmin />} />
-              <Route path="reports" element={<Reports />} />
               <Route path="poster" element={<Poster />} />
             </Route>
           </Route>

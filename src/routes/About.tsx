@@ -11,7 +11,7 @@ export function About() {
       </div>
 
       <section className="card space-y-3">
-        <h3 className="text-xl">For employees</h3>
+        <h3 className="text-xl">Everyone can</h3>
         <ul className="space-y-2 text-ink-700 text-sm">
           <li>
             <strong>Calendar.</strong> See what's been served and what's coming up. Tap a day to
@@ -29,20 +29,25 @@ export function About() {
             <strong>Requests.</strong> Suggest a meal you'd love to see. Upvote other people's
             requests to push your favorites up the list.
           </li>
+          <li>
+            <strong>Meal library.</strong> Add meals once with a name, description, photo, and
+            dietary tags — then schedule them onto the calendar. Anyone can help log a meal,
+            so we build the history together. Only admins can delete library entries.
+          </li>
+          <li>
+            <strong>Schedule a meal.</strong> Tap any date on the calendar to pick from the
+            library. Same meal can be scheduled as many times as it's made.
+          </li>
+          <li>
+            <strong>Reports.</strong> See top-rated meals, average ratings, and meal frequency
+            over the last 30 days or all time. Export to CSV anytime.
+          </li>
         </ul>
       </section>
 
       <section className="card space-y-3">
-        <h3 className="text-xl">For Amy</h3>
+        <h3 className="text-xl">For Amy (admin)</h3>
         <ul className="space-y-2 text-ink-700 text-sm">
-          <li>
-            <strong>Meal library.</strong> Save meals once with a name, description, photo, and
-            dietary tags — then schedule them onto the calendar whenever you make them.
-          </li>
-          <li>
-            <strong>Schedule a meal.</strong> Tap any date on the calendar and pick from the
-            library. Same meal can be scheduled as many times as you make it.
-          </li>
           <li>
             <strong>Employees.</strong> Approve new sign-ups, deactivate people who leave, see who
             has access.
@@ -52,12 +57,12 @@ export function About() {
             requests as scheduled, made, or declined — or just leave them open.
           </li>
           <li>
-            <strong>Reports.</strong> See top-rated meals, average ratings, and meal frequency over
-            the last 30 days or all time. Export to CSV anytime.
+            <strong>Moderation.</strong> Any comment can be hidden if it's unkind or off-topic.
+            Hidden comments only stay visible to admins.
           </li>
           <li>
-            <strong>Moderation.</strong> Any comment can be hidden if it's unkind or off-topic.
-            Hidden comments only stay visible to you.
+            <strong>Delete meals.</strong> Removing a library entry or a scheduled meal is admin-only,
+            so accidental cleanups don't lose history.
           </li>
         </ul>
       </section>

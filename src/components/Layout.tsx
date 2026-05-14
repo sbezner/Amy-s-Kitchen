@@ -30,7 +30,9 @@ export function Layout() {
 
         <nav className="flex items-center gap-1 mt-3 -mx-1 overflow-x-auto sm:overflow-visible">
           <TabLink to="/" label="Calendar" end />
+          <TabLink to="/meals" label="Meals" />
           <TabLink to="/requests" label="Requests" />
+          <TabLink to="/reports" label="Reports" />
           {isAmy && <TabLink to="/admin" label="Admin" />}
           <TabLink to="/about" label="About" />
         </nav>

@@ -30,12 +30,16 @@ service cloud.firestore {
 
     match /mealLibrary/{libId} {
       allow read: if isApproved();
-      allow write: if isAmy();
+      // Any approved user can add or edit meals; only Amy can delete.
+      allow create, update: if isApproved();
+      allow delete: if isAmy();
     }
 
     match /servings/{servingId} {
       allow read: if isApproved();
-      allow write: if isAmy();
+      // Any approved user can schedule or edit a serving; only Amy can delete.
+      allow create, update: if isApproved();
+      allow delete: if isAmy();
 
       match /ratings/{uid} {
         allow read: if isApproved();

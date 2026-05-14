@@ -9,6 +9,7 @@ import {
   setDoc,
 } from 'firebase/firestore'
 import { db } from '../../firebase'
+import { useAuth } from '../../auth/AuthProvider'
 import { DietaryTagPicker } from '../../components/DietaryTagChips'
 import { PhotoUpload } from '../../components/PhotoUpload'
 import { Loading } from '../../components/Loading'
@@ -17,6 +18,8 @@ import type { DietaryTag } from '../../types'
 export function EditMeal() {
   const { id } = useParams<{ id: string }>()
   const navigate = useNavigate()
+  const { appUser } = useAuth()
+  const isAmy = appUser?.role === 'amy'
   const isNew = !id
 
   // For new meals we pre-generate an ID so the photo upload has a stable path.
@@ -61,7 +64,7 @@ export function EditMeal() {
         },
         { merge: true },
       )
-      navigate('/admin/meals', { replace: true })
+      navigate('/meals', { replace: true })
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Save failed')
     } finally {
@@ -74,7 +77,7 @@ export function EditMeal() {
       return
     }
     await deleteDoc(doc(db, 'mealLibrary', docId))
-    navigate('/admin/meals', { replace: true })
+    navigate('/meals', { replace: true })
   }
 
   if (loading) return <Loading />
@@ -138,7 +141,7 @@ export function EditMeal() {
         {saving ? 'Saving…' : 'Save'}
       </button>
 
-      {!isNew && (
+      {!isNew && isAmy && (
         <button
           type="button"
           className="btn-ghost w-full text-terracotta-700"
