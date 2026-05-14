@@ -10,8 +10,10 @@ service cloud.firestore {
     function isSelf(uid) { return isSignedIn() && request.auth.uid == uid; }
 
     match /users/{uid} {
-      // Self can read own doc; Amy can read all users.
-      allow read: if isSelf(uid) || isAmy();
+      // Self can read own doc; any approved user can read other users
+      // (needed for reports/threshold calculations and to show display
+      // names alongside ratings); Amy can also read pending sign-ups.
+      allow read: if isSelf(uid) || isApproved();
 
       // First-time create must be self, employee, pending (no privilege escalation).
       allow create: if isSelf(uid)
