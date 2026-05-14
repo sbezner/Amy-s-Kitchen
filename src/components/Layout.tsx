@@ -10,27 +10,30 @@ export function Layout() {
 
   return (
     <div className="min-h-screen flex flex-col bg-cream-50">
-      <header className="px-5 pt-5 pb-4 border-b border-cream-200 bg-white/80 backdrop-blur print:hidden">
-        <div className="flex items-center gap-8">
-          <div className="flex-shrink-0">
-            <h1 className="text-2xl leading-tight">Amy's Kitchen</h1>
-            <p className="text-xs text-ink-500">
+      <header className="px-4 sm:px-5 pt-4 sm:pt-5 pb-3 border-b border-cream-200 bg-white/80 backdrop-blur print:hidden">
+        <div className="flex items-center justify-between gap-4">
+          <div className="min-w-0">
+            <h1 className="text-xl sm:text-2xl leading-tight">Amy's Kitchen</h1>
+            <p className="text-xs text-ink-500 truncate">
               Hi {appUser?.displayName}
               {isAmy ? ' · admin' : ''}
             </p>
           </div>
 
-          <nav className="flex items-center gap-1 sm:gap-2">
-            <TabLink to="/" label="Calendar" end />
-            <TabLink to="/requests" label="Requests" />
-            {isAmy && <TabLink to="/admin" label="Admin" />}
-            <TabLink to="/about" label="About" />
-          </nav>
-
-          <button className="btn-ghost text-sm px-3 py-2 flex-shrink-0 ml-auto" onClick={() => signOut(auth)}>
+          <button
+            className="btn-ghost text-sm px-3 py-2 flex-shrink-0"
+            onClick={() => signOut(auth)}
+          >
             Sign out
           </button>
         </div>
+
+        <nav className="flex items-center gap-1 mt-3 -mx-1 overflow-x-auto sm:overflow-visible">
+          <TabLink to="/" label="Calendar" end />
+          <TabLink to="/requests" label="Requests" />
+          {isAmy && <TabLink to="/admin" label="Admin" />}
+          <TabLink to="/about" label="About" />
+        </nav>
       </header>
 
       <InstallBanner />
