@@ -70,6 +70,11 @@ export function About() {
             app feel native — full-screen, fast, and one tap away.
           </li>
           <li>
+            <strong>Two ways to sign in.</strong> Tap "Sign in with Google" for one-tap access, or
+            request an email link if you'd rather. Only @energizedengines.com and @gmail.com
+            addresses are allowed.
+          </li>
+          <li>
             <strong>Sign-in emails sometimes land in spam.</strong> The first time you get one,
             mark it as "Not spam" so future ones come straight to your inbox.
           </li>

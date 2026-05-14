@@ -1,25 +1,33 @@
-import { createContext, useContext, useEffect, useState, type ReactNode } from 'react'
-import { onAuthStateChanged, type User } from 'firebase/auth'
+import { createContext, useCallback, useContext, useEffect, useState, type ReactNode } from 'react'
+import { onAuthStateChanged, signOut, type User } from 'firebase/auth'
 import { doc, getDoc, onSnapshot, serverTimestamp, setDoc } from 'firebase/firestore'
 import { auth, db } from '../firebase'
 import type { AppUser } from '../types'
+import { isAllowedEmail } from '../lib/allowedDomains'
 
 interface AuthContextValue {
   fbUser: User | null
   appUser: AppUser | null
   loading: boolean
+  rejected: { email: string } | null
+  clearRejected: () => void
 }
 
 const AuthContext = createContext<AuthContextValue>({
   fbUser: null,
   appUser: null,
   loading: true,
+  rejected: null,
+  clearRejected: () => {},
 })
 
 export function AuthProvider({ children }: { children: ReactNode }) {
   const [fbUser, setFbUser] = useState<User | null>(null)
   const [appUser, setAppUser] = useState<AppUser | null>(null)
   const [loading, setLoading] = useState(true)
+  const [rejected, setRejected] = useState<{ email: string } | null>(null)
+
+  const clearRejected = useCallback(() => setRejected(null), [])
 
   useEffect(() => {
     let unsubDoc: (() => void) | null = null
@@ -29,12 +37,21 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         unsubDoc()
         unsubDoc = null
       }
-      setFbUser(user)
       if (!user) {
+        setFbUser(null)
         setAppUser(null)
         setLoading(false)
         return
       }
+
+      if (!isAllowedEmail(user.email)) {
+        setRejected({ email: user.email ?? '' })
+        await signOut(auth)
+        return
+      }
+
+      setFbUser(user)
+      setRejected(null)
 
       const ref = doc(db, 'users', user.uid)
       const snap = await getDoc(ref)
@@ -72,7 +89,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   }, [])
 
   return (
-    <AuthContext.Provider value={{ fbUser, appUser, loading }}>
+    <AuthContext.Provider value={{ fbUser, appUser, loading, rejected, clearRejected }}>
       {children}
     </AuthContext.Provider>
   )

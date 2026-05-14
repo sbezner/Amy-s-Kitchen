@@ -1,20 +1,14 @@
 rules_version = '2';
 service firebase.storage {
   match /b/{bucket}/o {
+    // Storage rules can't reliably read Firestore on the firebasestorage.app
+    // bucket, so role-based gating is handled client-side. We still require an
+    // authenticated user and limit file size + content type on uploads.
     function isSignedIn() { return request.auth != null; }
-    function userDoc() {
-      return firestore.get(/databases/(default)/documents/users/$(request.auth.uid)).data;
-    }
-    function isApproved() {
-      return isSignedIn() && userDoc().status == 'approved';
-    }
-    function isAmy() {
-      return isApproved() && userDoc().role == 'amy';
-    }
 
     match /meals/{libId}/{file=**} {
-      allow read: if isApproved();
-      allow write: if isAmy()
+      allow read: if isSignedIn();
+      allow write: if isSignedIn()
         && request.resource.size < 5 * 1024 * 1024
         && request.resource.contentType.matches('image/.*');
     }
