@@ -14,6 +14,7 @@ import { MealDetail } from './routes/MealDetail'
 import { EditMeal } from './routes/EditMeal'
 import { ScheduleMeal } from './routes/ScheduleMeal'
 import { About } from './routes/About'
+import { Profile } from './routes/Profile'
 import { Admin } from './routes/Admin'
 import { AdminHome } from './routes/admin/AdminHome'
 import { Employees } from './routes/admin/Employees'
@@ -53,6 +54,7 @@ export function App() {
             <Route path="schedule/:date" element={<ScheduleMeal />} />
             <Route path="reports" element={<Reports />} />
             <Route path="about" element={<About />} />
+            <Route path="profile" element={<Profile />} />
             <Route path="admin" element={<Admin />}>
               <Route index element={<AdminHome />} />
               <Route path="employees" element={<Employees />} />

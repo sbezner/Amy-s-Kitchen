@@ -1,4 +1,4 @@
-import { NavLink, Outlet } from 'react-router-dom'
+import { Link, NavLink, Outlet } from 'react-router-dom'
 import { signOut } from 'firebase/auth'
 import { auth } from '../firebase'
 import { useAuth } from '../auth/AuthProvider'
@@ -14,10 +14,10 @@ export function Layout() {
         <div className="flex items-center justify-between gap-4">
           <div className="min-w-0">
             <h1 className="text-xl sm:text-2xl leading-tight">Amy's Kitchen</h1>
-            <p className="text-xs text-ink-500 truncate">
+            <Link to="/profile" className="text-xs text-ink-500 truncate hover:text-ink-700 transition block">
               Hi {appUser?.displayName}
               {isAmy ? ' · admin' : ''}
-            </p>
+            </Link>
           </div>
 
           <button

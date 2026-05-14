@@ -25,11 +25,14 @@ service cloud.firestore {
             && request.resource.data.status == 'approved')
         );
 
-      allow update: if isAmy()
+      allow update: if (isAmy()
         || (isSelf(uid)
             && request.resource.data.role == resource.data.role
             && request.resource.data.status == resource.data.status
-            && request.resource.data.email == resource.data.email);
+            && request.resource.data.email == resource.data.email))
+        && request.resource.data.displayName is string
+        && request.resource.data.displayName.size() > 0
+        && request.resource.data.displayName.size() <= 50;
 
       allow delete: if false;
     }
@@ -50,19 +53,33 @@ service cloud.firestore {
             || (request.resource.data.photos is list
                 && request.resource.data.photos.size() <= 6))
         && !('declinedReason' in request.resource.data);
-      allow update: if (isApproved()
-        && request.resource.data.name is string
-        && request.resource.data.name.size() <= 120
-        && (!('description' in request.resource.data)
-            || request.resource.data.description is string
-            && request.resource.data.description.size() <= 2000)
-        && (!('photos' in request.resource.data)
-            || (request.resource.data.photos is list
-                && request.resource.data.photos.size() <= 6))
-        // Non-admins can't touch decline fields.
-        && request.resource.data.get('declinedReason', '') == resource.data.get('declinedReason', '')
-        && request.resource.data.get('declinedBy', '') == resource.data.get('declinedBy', ''))
-        || isAmy();
+      allow update: if (
+        (isApproved()
+          && request.resource.data.name is string
+          && request.resource.data.name.size() <= 120
+          && (!('description' in request.resource.data)
+              || request.resource.data.description is string
+              && request.resource.data.description.size() <= 2000)
+          && (!('photos' in request.resource.data)
+              || (request.resource.data.photos is list
+                  && request.resource.data.photos.size() <= 6))
+          // Non-admins can't touch decline fields.
+          && request.resource.data.get('declinedReason', '') == resource.data.get('declinedReason', '')
+          && request.resource.data.get('declinedBy', '') == resource.data.get('declinedBy', ''))
+        || (isAmy()
+          && request.resource.data.name is string
+          && request.resource.data.name.size() <= 120
+          && (!('description' in request.resource.data)
+              || request.resource.data.description is string
+              && request.resource.data.description.size() <= 2000)
+          && (!('photos' in request.resource.data)
+              || (request.resource.data.photos is list
+                  && request.resource.data.photos.size() <= 6))
+          // Decline reason size cap (admin can clear it by setting null).
+          && (request.resource.data.get('declinedReason', null) == null
+              || (request.resource.data.declinedReason is string
+                  && request.resource.data.declinedReason.size() <= 500)))
+      );
 
       // Only Amy can delete a meal that's been scheduled, but the
       // creator of a pure-suggestion meal can also delete their own.
