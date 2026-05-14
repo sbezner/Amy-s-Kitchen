@@ -44,6 +44,9 @@ export function SignIn() {
             <p className="text-ink-700 mb-4">
               We sent a sign-in link to <strong>{email}</strong>. Tap it on the same device to come in.
             </p>
+            <p className="text-sm text-ink-500 mb-4">
+              Don't see it? Check your spam folder.
+            </p>
             <button
               type="button"
               className="btn-ghost"

@@ -10,36 +10,34 @@ export function Layout() {
 
   return (
     <div className="min-h-screen flex flex-col bg-cream-50">
-      <header className="px-5 pt-5 pb-3 flex items-center justify-between print:hidden">
-        <div>
-          <h1 className="text-2xl leading-tight">Amy's Kitchen</h1>
-          <p className="text-xs text-ink-500">
-            Hi {appUser?.displayName}
-            {isAmy ? ' · admin' : ''}
-          </p>
+      <header className="px-5 pt-5 pb-4 border-b border-cream-200 bg-white/80 backdrop-blur print:hidden">
+        <div className="flex items-center gap-8">
+          <div className="flex-shrink-0">
+            <h1 className="text-2xl leading-tight">Amy's Kitchen</h1>
+            <p className="text-xs text-ink-500">
+              Hi {appUser?.displayName}
+              {isAmy ? ' · admin' : ''}
+            </p>
+          </div>
+
+          <nav className="flex items-center gap-1 sm:gap-2">
+            <TabLink to="/" label="Calendar" end />
+            <TabLink to="/requests" label="Requests" />
+            {isAmy && <TabLink to="/admin" label="Admin" />}
+            <TabLink to="/about" label="About" />
+          </nav>
+
+          <button className="btn-ghost text-sm px-3 py-2 flex-shrink-0 ml-auto" onClick={() => signOut(auth)}>
+            Sign out
+          </button>
         </div>
-        <button className="btn-ghost text-sm px-3 py-2" onClick={() => signOut(auth)}>
-          Sign out
-        </button>
       </header>
 
       <InstallBanner />
 
-      <main className="flex-1 px-5 pb-28">
+      <main className="flex-1 px-5 pb-8">
         <Outlet />
       </main>
-
-      <nav className="fixed bottom-0 inset-x-0 bg-white/95 backdrop-blur border-t border-cream-200 pb-[env(safe-area-inset-bottom)] print:hidden">
-        <div className="max-w-md mx-auto grid grid-cols-3">
-          <TabLink to="/" label="Calendar" icon={CalendarIcon} end />
-          <TabLink to="/requests" label="Requests" icon={RequestsIcon} />
-          {isAmy ? (
-            <TabLink to="/admin" label="Admin" icon={AdminIcon} />
-          ) : (
-            <span aria-hidden className="opacity-0" />
-          )}
-        </div>
-      </nav>
     </div>
   )
 }
@@ -47,12 +45,10 @@ export function Layout() {
 function TabLink({
   to,
   label,
-  icon: Icon,
   end,
 }: {
   to: string
   label: string
-  icon: (props: { active: boolean }) => JSX.Element
   end?: boolean
 }) {
   return (
@@ -60,42 +56,14 @@ function TabLink({
       to={to}
       end={end}
       className={({ isActive }) =>
-        `flex flex-col items-center gap-1 py-3 text-xs font-semibold ${
-          isActive ? 'text-terracotta-600' : 'text-ink-500'
+        `px-3 sm:px-4 py-2 rounded-full text-sm font-semibold transition-colors ${
+          isActive
+            ? 'bg-terracotta-500/10 text-terracotta-700'
+            : 'text-ink-500 hover:text-ink-700 hover:bg-cream-100'
         }`
       }
     >
-      {({ isActive }) => (
-        <>
-          <Icon active={isActive} />
-          <span>{label}</span>
-        </>
-      )}
+      {label}
     </NavLink>
-  )
-}
-
-function CalendarIcon({ active }: { active: boolean }) {
-  return (
-    <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={active ? 2.4 : 2} strokeLinecap="round" strokeLinejoin="round">
-      <rect x="3" y="5" width="18" height="16" rx="2" />
-      <path d="M3 10h18M8 3v4M16 3v4" />
-    </svg>
-  )
-}
-
-function RequestsIcon({ active }: { active: boolean }) {
-  return (
-    <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={active ? 2.4 : 2} strokeLinecap="round" strokeLinejoin="round">
-      <path d="M12 21s-7-4.5-7-10a5 5 0 0 1 9-3 5 5 0 0 1 9 3c0 5.5-7 10-7 10z" />
-    </svg>
-  )
-}
-
-function AdminIcon({ active }: { active: boolean }) {
-  return (
-    <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={active ? 2.4 : 2} strokeLinecap="round" strokeLinejoin="round">
-      <path d="M12 3l8 4v5c0 5-3.5 8-8 9-4.5-1-8-4-8-9V7l8-4z" />
-    </svg>
   )
 }

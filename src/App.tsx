@@ -9,6 +9,7 @@ import { Layout } from './components/Layout'
 import { Calendar } from './routes/Calendar'
 import { DayDetail } from './routes/DayDetail'
 import { Requests } from './routes/Requests'
+import { About } from './routes/About'
 import { Admin } from './routes/Admin'
 import { AdminHome } from './routes/admin/AdminHome'
 import { MealLibrary } from './routes/admin/MealLibrary'
@@ -44,6 +45,7 @@ export function App() {
             <Route index element={<Calendar />} />
             <Route path="day/:date" element={<DayDetail />} />
             <Route path="requests" element={<Requests />} />
+            <Route path="about" element={<About />} />
             <Route path="admin" element={<Admin />}>
               <Route index element={<AdminHome />} />
               <Route path="meals" element={<MealLibrary />} />
