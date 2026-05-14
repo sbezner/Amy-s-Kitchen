@@ -108,6 +108,7 @@ export function EditMeal() {
             value={name}
             onChange={(e) => setName(e.target.value)}
             placeholder="Lasagna, Pad Thai, Sunday Roast…"
+            maxLength={120}
           />
         </div>
 
@@ -121,6 +122,7 @@ export function EditMeal() {
             value={description}
             onChange={(e) => setDescription(e.target.value)}
             placeholder="A short note about this dish, what's in it, why people might love it."
+            maxLength={2000}
           />
         </div>
 

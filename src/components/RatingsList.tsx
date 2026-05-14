@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react'
 import { collection, doc, onSnapshot, updateDoc } from 'firebase/firestore'
 import { db } from '../firebase'
 import { useAuth } from '../auth/AuthProvider'
+import { useDisplayName } from '../lib/users'
 import { StarRating } from './StarRating'
 
 interface RatingDoc {
@@ -82,35 +83,56 @@ export function RatingsList({ servingId }: Props) {
       )}
 
       {visible.map((r) => (
-        <div
+        <RatingRow
           key={r.uid}
-          className={`card ${r.hiddenByAmy ? 'opacity-60 border border-dashed border-ink-500/30' : ''}`}
-        >
-          <div className="flex items-start justify-between gap-3">
-            <div className="flex items-center gap-3">
-              <div className="w-9 h-9 rounded-full bg-cream-200 flex items-center justify-center font-semibold text-sm text-ink-700">
-                {r.raterDisplayName.charAt(0).toUpperCase()}
-              </div>
-              <div>
-                <div className="font-semibold text-sm">{r.raterDisplayName}</div>
-                <StarRating value={r.stars} size="sm" />
-              </div>
-            </div>
-            {isAmy && (
-              <button
-                className="text-xs font-semibold text-ink-500 underline"
-                onClick={() => toggleHidden(r)}
-              >
-                {r.hiddenByAmy ? 'Unhide' : 'Hide'}
-              </button>
-            )}
-          </div>
-          {r.comment && <p className="mt-2 text-ink-700 whitespace-pre-wrap text-sm">{r.comment}</p>}
-          {r.hiddenByAmy && isAmy && (
-            <p className="mt-2 text-xs italic text-ink-500">Hidden from everyone else.</p>
-          )}
-        </div>
+          rating={r}
+          isAmy={isAmy}
+          onToggleHidden={() => toggleHidden(r)}
+        />
       ))}
+    </div>
+  )
+}
+
+function RatingRow({
+  rating,
+  isAmy,
+  onToggleHidden,
+}: {
+  rating: RatingDoc
+  isAmy: boolean
+  onToggleHidden: () => void
+}) {
+  const displayName = useDisplayName(rating.uid, rating.raterDisplayName)
+  return (
+    <div
+      className={`card ${rating.hiddenByAmy ? 'opacity-60 border border-dashed border-ink-500/30' : ''}`}
+    >
+      <div className="flex items-start justify-between gap-3">
+        <div className="flex items-center gap-3">
+          <div className="w-9 h-9 rounded-full bg-cream-200 flex items-center justify-center font-semibold text-sm text-ink-700">
+            {displayName.charAt(0).toUpperCase()}
+          </div>
+          <div>
+            <div className="font-semibold text-sm">{displayName}</div>
+            <StarRating value={rating.stars} size="sm" />
+          </div>
+        </div>
+        {isAmy && (
+          <button
+            className="text-xs font-semibold text-ink-500 underline"
+            onClick={onToggleHidden}
+          >
+            {rating.hiddenByAmy ? 'Unhide' : 'Hide'}
+          </button>
+        )}
+      </div>
+      {rating.comment && (
+        <p className="mt-2 text-ink-700 whitespace-pre-wrap text-sm">{rating.comment}</p>
+      )}
+      {rating.hiddenByAmy && isAmy && (
+        <p className="mt-2 text-xs italic text-ink-500">Hidden from everyone else.</p>
+      )}
     </div>
   )
 }

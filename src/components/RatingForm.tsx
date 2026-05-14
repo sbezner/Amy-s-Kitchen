@@ -42,12 +42,13 @@ export function RatingForm({ servingId }: Props) {
     setSaving(true)
     try {
       const ref = doc(db, 'servings', servingId, 'ratings', appUser.uid)
+      // We don't store the display name here on purpose — it's
+      // looked up live from the user doc so renames propagate.
       await setDoc(
         ref,
         {
           stars,
           comment: comment.trim(),
-          raterDisplayName: appUser.displayName,
           updatedAt: serverTimestamp(),
         },
         { merge: true },
@@ -89,14 +90,15 @@ export function RatingForm({ servingId }: Props) {
       {stars > 0 && (
         <div>
           <label className="label" htmlFor="comment">
-            {lowRating ? "Tell Amy what didn't work" : 'Comment (optional)'}
+            {lowRating ? "Tell us what didn't work" : 'Comment (optional)'}
           </label>
           <textarea
             id="comment"
             className="input min-h-[80px]"
             value={comment}
             onChange={(e) => setComment(e.target.value)}
-            placeholder={lowRating ? 'Helps Amy understand the rating.' : 'Anything you want Amy to know.'}
+            maxLength={1000}
+            placeholder={lowRating ? 'Helps us understand the rating.' : 'Anything you want to share.'}
           />
         </div>
       )}

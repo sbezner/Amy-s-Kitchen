@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react'
 import { collection, deleteDoc, doc, onSnapshot, serverTimestamp, setDoc } from 'firebase/firestore'
 import { db } from '../firebase'
 import { useAuth } from '../auth/AuthProvider'
+import { useUsers } from '../lib/users'
 
 interface Props {
   servingId: string
@@ -9,11 +10,12 @@ interface Props {
 
 interface Reaction {
   uid: string
-  raterDisplayName: string
+  storedName?: string
 }
 
 export function LookingForwardButton({ servingId }: Props) {
   const { appUser } = useAuth()
+  const { users } = useUsers()
   const [reactions, setReactions] = useState<Reaction[]>([])
   const [busy, setBusy] = useState(false)
 
@@ -23,7 +25,7 @@ export function LookingForwardButton({ servingId }: Props) {
       setReactions(
         snap.docs.map((d) => ({
           uid: d.id,
-          raterDisplayName: d.data().raterDisplayName ?? 'Member',
+          storedName: d.data().raterDisplayName,
         })),
       )
     })
@@ -39,10 +41,8 @@ export function LookingForwardButton({ servingId }: Props) {
       if (mine) {
         await deleteDoc(ref)
       } else {
-        await setDoc(ref, {
-          raterDisplayName: appUser.displayName,
-          createdAt: serverTimestamp(),
-        })
+        // No raterDisplayName written — name comes from the user doc.
+        await setDoc(ref, { createdAt: serverTimestamp() })
       }
     } catch (err) {
       alert(err instanceof Error ? err.message : 'Could not update reaction')
@@ -51,10 +51,8 @@ export function LookingForwardButton({ servingId }: Props) {
     }
   }
 
-  const others = reactions
-    .filter((r) => r.uid !== appUser?.uid)
-    .slice(0, 3)
-    .map((r) => r.raterDisplayName)
+  const nameFor = (r: Reaction) => users.get(r.uid)?.displayName || r.storedName || 'Member'
+  const others = reactions.filter((r) => r.uid !== appUser?.uid).slice(0, 3).map(nameFor)
   const moreCount = Math.max(0, reactions.length - (mine ? 1 : 0) - others.length)
 
   return (

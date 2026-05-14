@@ -13,7 +13,7 @@ import {
 } from 'firebase/firestore'
 import { db } from '../../firebase'
 import { useMealLibrary } from '../../lib/db'
-import { formatDateHeading, fromDateKey, isFuture } from '../../lib/dates'
+import { formatDateHeading, fromDateKey, isFuture, isValidDateKey } from '../../lib/dates'
 
 export function ScheduleMeal() {
   const { date } = useParams<{ date: string }>()
@@ -23,7 +23,15 @@ export function ScheduleMeal() {
   const [error, setError] = useState<string | null>(null)
   const [notes, setNotes] = useState('')
 
-  if (!date) return null
+  if (!date || !isValidDateKey(date)) {
+    return (
+      <div className="py-4">
+        <div className="card text-ink-700">
+          {date ? `"${date}" isn't a valid date.` : 'No date specified.'}
+        </div>
+      </div>
+    )
+  }
   const d = fromDateKey(date)
 
   async function pick(libraryId: string) {
@@ -109,6 +117,7 @@ export function ScheduleMeal() {
             value={notes}
             onChange={(e) => setNotes(e.target.value)}
             placeholder="e.g. extra spicy this time, side salad included"
+            maxLength={500}
           />
         </div>
       </div>

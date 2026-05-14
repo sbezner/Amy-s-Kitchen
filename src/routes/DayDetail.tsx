@@ -3,7 +3,7 @@ import { deleteDoc, doc } from 'firebase/firestore'
 import { db } from '../firebase'
 import { useAuth } from '../auth/AuthProvider'
 import { useLibraryEntry, useServingByDate } from '../lib/db'
-import { fromDateKey, formatDateHeading, isFuture } from '../lib/dates'
+import { fromDateKey, formatDateHeading, isFuture, isValidDateKey } from '../lib/dates'
 import { DietaryTagChips } from '../components/DietaryTagChips'
 import { Loading } from '../components/Loading'
 import { RatingForm } from '../components/RatingForm'
@@ -19,8 +19,10 @@ export function DayDetail() {
   const serving = useServingByDate(date)
   const entry = useLibraryEntry(serving?.libraryId)
 
-  if (!date) {
-    return <Navigation message="Pick a date from the calendar." />
+  if (!date || !isValidDateKey(date)) {
+    return (
+      <Navigation message={date ? `"${date}" isn't a valid date.` : 'Pick a date from the calendar.'} />
+    )
   }
 
   const d = fromDateKey(date)

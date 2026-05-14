@@ -3,6 +3,7 @@ import { useNavigate } from 'react-router-dom'
 import { collection, getDocs, query, where } from 'firebase/firestore'
 import { db } from '../../firebase'
 import { useMealLibrary } from '../../lib/db'
+import { useUsers } from '../../lib/users'
 import { todayKey, toDateKey, fromDateKey, formatDateHeading } from '../../lib/dates'
 import { Loading } from '../../components/Loading'
 import { StarRating } from '../../components/StarRating'
@@ -112,6 +113,7 @@ function aggregateByLibrary(rows: RatingRow[]): LibraryAggregate[] {
 export function Reports() {
   const navigate = useNavigate()
   const { library } = useMealLibrary()
+  const { users } = useUsers()
   const [data, setData] = useState<{ ratings: RatingRow[]; servings: ServingMeta[] } | null>(null)
   const [activeCount, setActiveCount] = useState<number>(0)
   const [loading, setLoading] = useState(true)
@@ -174,7 +176,7 @@ export function Reports() {
         <h2 className="text-2xl">Reports</h2>
         <button
           className="btn-secondary text-sm px-3 py-2"
-          onClick={() => downloadCsv(data.ratings, libraryById)}
+          onClick={() => downloadCsv(data.ratings, libraryById, users)}
         >
           Export CSV
         </button>
@@ -311,7 +313,11 @@ function AggregateRow({
   )
 }
 
-function downloadCsv(ratings: RatingRow[], libraryById: Map<string, MealLibraryEntry>) {
+function downloadCsv(
+  ratings: RatingRow[],
+  libraryById: Map<string, MealLibraryEntry>,
+  users: Map<string, { displayName: string }>,
+) {
   const header = ['date', 'meal', 'employee', 'stars', 'comment', 'hidden']
   const escape = (s: string) => `"${(s ?? '').replace(/"/g, '""')}"`
   const rows = ratings
@@ -321,7 +327,7 @@ function downloadCsv(ratings: RatingRow[], libraryById: Map<string, MealLibraryE
       [
         r.servingDate,
         libraryById.get(r.libraryId)?.name ?? 'Unknown',
-        r.raterDisplayName,
+        users.get(r.uid)?.displayName || r.raterDisplayName || 'Member',
         String(r.stars),
         r.comment,
         r.hiddenByAmy ? 'yes' : 'no',

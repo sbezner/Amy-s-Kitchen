@@ -4,6 +4,7 @@ import { AuthProvider, useAuth } from './auth/AuthProvider'
 import { SignIn } from './auth/SignIn'
 import { FinishSignIn } from './auth/FinishSignIn'
 import { Pending } from './auth/Pending'
+import { UsersProvider } from './lib/users'
 import { Loading } from './components/Loading'
 import { Layout } from './components/Layout'
 import { Calendar } from './routes/Calendar'
@@ -38,7 +39,9 @@ export function App() {
           <Route
             element={
               <Gate>
-                <Layout />
+                <UsersProvider>
+                  <Layout />
+                </UsersProvider>
               </Gate>
             }
           >

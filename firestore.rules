@@ -45,14 +45,24 @@ service cloud.firestore {
     match /mealLibrary/{libId} {
       allow read: if isApproved();
       // Any approved user can add or edit meals; only Amy can delete.
-      allow create, update: if isApproved();
+      // String length caps prevent multi-megabyte payloads.
+      allow create, update: if isApproved()
+        && request.resource.data.name is string
+        && request.resource.data.name.size() <= 120
+        && (!('description' in request.resource.data)
+            || request.resource.data.description is string
+            && request.resource.data.description.size() <= 2000);
       allow delete: if isAmy();
     }
 
     match /servings/{servingId} {
       allow read: if isApproved();
       // Any approved user can schedule or edit a serving; only Amy can delete.
-      allow create, update: if isApproved();
+      allow create, update: if isApproved()
+        && (!('notes' in request.resource.data)
+            || request.resource.data.notes == null
+            || (request.resource.data.notes is string
+                && request.resource.data.notes.size() <= 500));
       allow delete: if isAmy();
 
       match /ratings/{uid} {
@@ -62,12 +72,18 @@ service cloud.firestore {
                           && request.resource.data.stars is int
                           && request.resource.data.stars >= 1
                           && request.resource.data.stars <= 5
+                          && (!('comment' in request.resource.data)
+                              || request.resource.data.comment is string
+                              && request.resource.data.comment.size() <= 1000)
                           && request.resource.data.get('hiddenByAmy', false) == false)
                          || isAmy();
         allow update: if (isSelf(uid) && isApproved()
                           && request.resource.data.stars is int
                           && request.resource.data.stars >= 1
                           && request.resource.data.stars <= 5
+                          && (!('comment' in request.resource.data)
+                              || request.resource.data.comment is string
+                              && request.resource.data.comment.size() <= 1000)
                           && request.resource.data.get('hiddenByAmy', false) == resource.data.get('hiddenByAmy', false))
                          || isAmy();
         allow delete: if isSelf(uid) || isAmy();
@@ -81,11 +97,24 @@ service cloud.firestore {
 
     match /requests/{reqId} {
       allow read: if isApproved();
-      allow create: if isApproved() && request.resource.data.requestedBy == request.auth.uid;
+      allow create: if isApproved()
+        && request.resource.data.requestedBy == request.auth.uid
+        && request.resource.data.mealName is string
+        && request.resource.data.mealName.size() <= 120
+        && (!('notes' in request.resource.data)
+            || request.resource.data.notes == null
+            || (request.resource.data.notes is string
+                && request.resource.data.notes.size() <= 1000));
       allow update: if isAmy()
         || (isApproved()
             && resource.data.requestedBy == request.auth.uid
-            && request.resource.data.requestedBy == resource.data.requestedBy);
+            && request.resource.data.requestedBy == resource.data.requestedBy
+            && request.resource.data.mealName is string
+            && request.resource.data.mealName.size() <= 120
+            && (!('notes' in request.resource.data)
+                || request.resource.data.notes == null
+                || (request.resource.data.notes is string
+                    && request.resource.data.notes.size() <= 1000)));
       allow delete: if isAmy();
 
       match /upvotes/{uid} {

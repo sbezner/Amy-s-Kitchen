@@ -21,9 +21,10 @@ export function Requests() {
     setSubmitting(true)
     setError(null)
     try {
+      // No requestedByName here — the display name is looked up
+      // from the user doc at render time so renames flow through.
       await addDoc(collection(db, 'requests'), {
         requestedBy: appUser.uid,
-        requestedByName: appUser.displayName,
         mealName: mealName.trim(),
         notes: notes.trim() || null,
         status: 'open',
@@ -52,6 +53,7 @@ export function Requests() {
             value={mealName}
             onChange={(e) => setMealName(e.target.value)}
             placeholder="Lasagna, butter chicken, sushi…"
+            maxLength={120}
             required
           />
         </div>
@@ -64,6 +66,7 @@ export function Requests() {
             className="input min-h-[60px]"
             value={notes}
             onChange={(e) => setNotes(e.target.value)}
+            maxLength={1000}
             placeholder="Anything Amy should know?"
           />
         </div>

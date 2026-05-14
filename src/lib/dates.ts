@@ -1,3 +1,21 @@
+const DATE_KEY_RE = /^\d{4}-\d{2}-\d{2}$/
+
+/**
+ * Returns true if the input is a real `YYYY-MM-DD` date key — i.e.
+ * the format matches and the date round-trips through the Date
+ * constructor (so 2026-13-99 returns false).
+ */
+export function isValidDateKey(key: string | undefined | null): key is string {
+  if (!key || !DATE_KEY_RE.test(key)) return false
+  const [y, m, d] = key.split('-').map(Number)
+  const date = new Date(y, m - 1, d)
+  return (
+    date.getFullYear() === y &&
+    date.getMonth() === m - 1 &&
+    date.getDate() === d
+  )
+}
+
 export function toDateKey(d: Date): string {
   const y = d.getFullYear()
   const m = String(d.getMonth() + 1).padStart(2, '0')

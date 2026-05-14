@@ -2,6 +2,7 @@ import { useState } from 'react'
 import { deleteDoc, doc, serverTimestamp, setDoc, updateDoc } from 'firebase/firestore'
 import { db } from '../firebase'
 import { useAuth } from '../auth/AuthProvider'
+import { useDisplayName } from '../lib/users'
 import { useUpvotes } from '../lib/requests'
 import type { Request } from '../types'
 
@@ -30,6 +31,7 @@ export function RequestCard({ request, adminMode = false }: Props) {
   const isAmy = appUser?.role === 'amy'
   const showActions = isMine || isAmy
   const { count, upvoted } = useUpvotes(request.id, appUser?.uid)
+  const requesterName = useDisplayName(request.requestedBy, request.requestedByName)
 
   const [editing, setEditing] = useState(false)
   const [editName, setEditName] = useState(request.mealName)
@@ -90,6 +92,7 @@ export function RequestCard({ request, adminMode = false }: Props) {
             className="input"
             value={editName}
             onChange={(e) => setEditName(e.target.value)}
+            maxLength={120}
             autoFocus
           />
         </div>
@@ -102,6 +105,7 @@ export function RequestCard({ request, adminMode = false }: Props) {
             className="input min-h-[60px]"
             value={editNotes}
             onChange={(e) => setEditNotes(e.target.value)}
+            maxLength={1000}
           />
         </div>
         <div className="flex gap-2">
@@ -126,7 +130,7 @@ export function RequestCard({ request, adminMode = false }: Props) {
               {STATUS_LABEL[request.status]}
             </span>
           </div>
-          <div className="text-xs text-ink-500 mt-0.5">Suggested by {request.requestedByName}</div>
+          <div className="text-xs text-ink-500 mt-0.5">Suggested by {requesterName}</div>
           {request.notes && (
             <p className="text-sm text-ink-700 mt-2 whitespace-pre-wrap">{request.notes}</p>
           )}
