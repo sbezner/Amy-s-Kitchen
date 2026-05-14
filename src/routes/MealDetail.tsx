@@ -51,6 +51,9 @@ export function MealDetail() {
   const isOwner = appUser?.uid === meal.createdBy
   const isDeclined = !!meal.declinedReason
   const canDelete = isAmy || (isOwner && servings.length === 0 && !isDeclined)
+  // Decline only applies to suggested meals — once a meal has been on
+  // the calendar, "decline" doesn't fit semantically.
+  const canDecline = isAmy && !isDeclined && servings.length === 0
   const futureServings = servings.filter((s) => isFuture(fromDateKey(s.servedDate)))
   const pastServings = servings.filter((s) => !isFuture(fromDateKey(s.servedDate)))
 
@@ -179,7 +182,6 @@ export function MealDetail() {
       <ServingsSection
         futureServings={futureServings}
         pastServings={pastServings}
-        mealId={id}
         isAmy={isAmy}
       />
 
@@ -190,7 +192,7 @@ export function MealDetail() {
         >
           Edit meal
         </Link>
-        {isAmy && !isDeclined && (
+        {canDecline && (
           <button
             className="btn-ghost w-full"
             onClick={() => setDeclineDialogOpen(true)}
@@ -222,32 +224,27 @@ export function MealDetail() {
 function ServingsSection({
   futureServings,
   pastServings,
-  mealId,
   isAmy,
 }: {
   futureServings: { id: string; servedDate: string }[]
   pastServings: { id: string; servedDate: string }[]
-  mealId: string
   isAmy: boolean
 }) {
   const total = futureServings.length + pastServings.length
-  if (total === 0 && !isAmy) {
+  if (total === 0) {
     return (
       <div className="card text-sm text-ink-500">
-        Not yet on the calendar. {isAmy ? 'Schedule it on a day.' : "Ask if we can make it!"}
+        Not yet on the calendar.{' '}
+        {isAmy ? "Tap a date on the calendar to schedule it." : "Up-vote it above so we'll see it."}
       </div>
     )
   }
 
   return (
     <div className="card space-y-3">
-      <div className="flex items-center justify-between">
-        <h3 className="font-semibold">
-          {total === 0
-            ? 'Not yet on the calendar'
-            : `Served ${total} time${total === 1 ? '' : 's'}`}
-        </h3>
-      </div>
+      <h3 className="font-semibold">
+        Served {total} time{total === 1 ? '' : 's'}
+      </h3>
 
       {futureServings.length > 0 && (
         <div>
@@ -256,7 +253,7 @@ function ServingsSection({
           </div>
           <div className="space-y-1.5">
             {futureServings.map((s) => (
-              <ServingRow key={s.id} date={s.servedDate} />
+              <ServingRow key={s.id} servingId={s.id} date={s.servedDate} isAmy={isAmy} />
             ))}
           </div>
         </div>
@@ -269,7 +266,7 @@ function ServingsSection({
           </div>
           <div className="space-y-1.5">
             {pastServings.slice(0, 12).map((s) => (
-              <ServingRow key={s.id} date={s.servedDate} />
+              <ServingRow key={s.id} servingId={s.id} date={s.servedDate} isAmy={isAmy} />
             ))}
             {pastServings.length > 12 && (
               <div className="text-xs text-ink-500 italic">
@@ -279,25 +276,42 @@ function ServingsSection({
           </div>
         </div>
       )}
-
-      {isAmy && (
-        <div className="pt-2 border-t border-cream-200 text-xs text-ink-500">
-          Use the calendar to schedule {mealId ? 'this meal' : ''} on a date.
-        </div>
-      )}
     </div>
   )
 }
 
-function ServingRow({ date }: { date: string }) {
+function ServingRow({ servingId, date, isAmy }: { servingId: string; date: string; isAmy: boolean }) {
+  async function remove(e: React.MouseEvent) {
+    e.preventDefault()
+    e.stopPropagation()
+    if (!confirm(`Remove this meal from ${formatDateHeading(fromDateKey(date))}?`)) return
+    try {
+      await deleteDoc(doc(db, 'servings', servingId))
+    } catch (err) {
+      alert(err instanceof Error ? err.message : 'Could not remove from this date')
+    }
+  }
+
   return (
-    <Link
-      to={`/day/${date}`}
-      className="flex items-center justify-between text-sm hover:bg-cream-100/60 rounded-lg px-2 py-1.5 transition"
-    >
-      <span>{formatDateHeading(fromDateKey(date))}</span>
-      <span className="text-ink-500">›</span>
-    </Link>
+    <div className="flex items-center gap-2">
+      <Link
+        to={`/day/${date}`}
+        className="flex-1 flex items-center justify-between text-sm hover:bg-cream-100/60 rounded-lg px-2 py-1.5 transition"
+      >
+        <span>{formatDateHeading(fromDateKey(date))}</span>
+        <span className="text-ink-500">›</span>
+      </Link>
+      {isAmy && (
+        <button
+          type="button"
+          onClick={remove}
+          className="text-xs font-semibold text-terracotta-700 hover:bg-terracotta-500/10 rounded-lg px-2 py-1.5 transition shrink-0"
+          aria-label={`Remove from ${date}`}
+        >
+          Remove
+        </button>
+      )}
+    </div>
   )
 }
 
