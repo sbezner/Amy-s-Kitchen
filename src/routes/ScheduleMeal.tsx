@@ -86,7 +86,9 @@ export function ScheduleMeal() {
           notes: notes.trim() || null,
         })
       }
-      navigate(`/day/${date}`, { replace: true })
+      // Land back on the calendar, on the month that contains the
+      // newly-scheduled date, so the user sees their meal in context.
+      navigate(`/?d=${date}`, { replace: true })
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Save failed')
     } finally {
