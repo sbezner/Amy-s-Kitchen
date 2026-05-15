@@ -5,9 +5,11 @@ import {
   deleteDoc,
   doc,
   getDocs,
+  query,
   serverTimestamp,
   setDoc,
   updateDoc,
+  where,
 } from 'firebase/firestore'
 import { db } from '../firebase'
 import { useAuth } from '../auth/AuthProvider'
@@ -74,19 +76,33 @@ export function MealDetail() {
   async function handleDelete() {
     if (!id) return
     const msg = servings.length > 0
-      ? `Delete "${meal!.name}"? It has been served ${servings.length} time${servings.length === 1 ? '' : 's'}; those dates will show "Unknown meal".`
+      ? `Delete "${meal!.name}"? This will also clear it from ${servings.length} scheduled date${servings.length === 1 ? '' : 's'}.`
       : `Delete "${meal!.name}"?`
     if (!confirm(msg)) return
     try {
-      // Clean ratings + upvotes too (best-effort).
-      const [ratings, upvotes] = await Promise.all([
+      // Cascade-clean ratings, upvotes, and any servings referencing
+      // this meal so we don't leave orphan calendar entries pointing
+      // to a meal that no longer exists.
+      const [ratings, upvotes, refServings] = await Promise.all([
         getDocs(collection(db, 'mealLibrary', id, 'ratings')),
         getDocs(collection(db, 'mealLibrary', id, 'upvotes')),
+        getDocs(query(collection(db, 'servings'), where('libraryId', '==', id))),
       ])
+      // Also clear each serving's lookingForward sub-collection.
+      const lookingForwardDocs = (
+        await Promise.all(
+          refServings.docs.map((s) =>
+            getDocs(collection(db, 'servings', s.id, 'lookingForward')),
+          ),
+        )
+      ).flatMap((snap) => snap.docs)
+
       await Promise.all([
         ...ratings.docs.map((d) => deleteDoc(d.ref)),
         ...upvotes.docs.map((d) => deleteDoc(d.ref)),
+        ...lookingForwardDocs.map((d) => deleteDoc(d.ref)),
       ])
+      await Promise.all(refServings.docs.map((d) => deleteDoc(d.ref)))
       await deleteDoc(doc(db, 'mealLibrary', id))
       navigate('/meals', { replace: true })
     } catch (err) {
