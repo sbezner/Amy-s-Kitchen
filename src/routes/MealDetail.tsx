@@ -208,6 +208,12 @@ export function MealDetail() {
         >
           Edit meal
         </Link>
+        <Link
+          to="/meals/new"
+          className="btn-ghost w-full"
+        >
+          + Create another meal
+        </Link>
         {canDecline && (
           <button
             className="btn-ghost w-full"
