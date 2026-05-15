@@ -24,7 +24,7 @@ export function About() {
         <ul className="space-y-2 text-ink-700 text-sm">
           <li>
             <strong>Add a meal.</strong> Anyone can create a meal entry with photos, dietary tags,
-            and a description. New meals that haven't been served yet show up under "Suggested".
+            and a description.
           </li>
           <li>
             <strong>Schedule a meal.</strong> Tap any date on the calendar to pick a meal for that

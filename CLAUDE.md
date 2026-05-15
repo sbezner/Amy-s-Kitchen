@@ -2,7 +2,7 @@
 
 Internal meal app for Amy (and other admins) to log meals served to the
 Energized Engines team and gather ratings, comments, "make this again"
-upvotes, "looking forward" reactions, and suggestions.
+upvotes, and "looking forward" reactions.
 
 ## Stack
 
@@ -30,7 +30,7 @@ src/
   routes/
     Calendar.tsx           # home — month calendar (reads ?d= hint)
     DayDetail.tsx          # per-day summary + LookingForward + schedule CTA
-    Meals.tsx              # meals list with filters (All/Active/Suggested/Declined)
+    Meals.tsx              # single list of every meal in the library
     MealDetail.tsx         # the central "everything about this meal" page
     EditMeal.tsx           # add/edit meal (photos, tags, description)
     ScheduleMeal.tsx       # pick a meal for a date
@@ -65,7 +65,7 @@ of dates served all hang off a meal.
 There is **no** `requests` collection anymore. A meal is a meal — either it's
 been served (has servings) or it hasn't. The Meals page shows everything as a
 single list; users see a meal's serving count, rating, and upvote total inline
-on each card. There is no separate "declined" state.
+on each card.
 
 ## Auth & authorization
 
@@ -144,7 +144,7 @@ current state is the meal-centric unified model:
 
 - Auth: Google + email-link with domain allowlist and admin defensive bootstrap.
 - Meal-centric model: one rating per (user, meal), multi-photo gallery, dates served list, upvote.
-- Anyone-can-edit meal management — only admins can delete or decline.
+- Anyone-can-edit meal management — only admins can delete meals that have been scheduled.
 - Calendar jumps straight to a meal page on tap. Empty days route to /day/:date for a Schedule CTA.
 - Reports: most/least liked + most frequent, last-30-days + all-time, CSV export.
 - PWA install banner, QR poster, print styles.

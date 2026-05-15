@@ -1,7 +1,7 @@
 # Amy's Kitchen
 
 A small internal app for Amy to plan meals for the Energized Engines team and
-for the team to rate them, upvote favourites, and suggest new ones.
+for the team to rate them, upvote favourites, and add new ones to the library.
 
 Built as a static React + Vite app hosted on **GitHub Pages**, with
 **Firebase** (Auth + Firestore + Storage) as the backend.

@@ -38,7 +38,7 @@ export function Poster() {
         <div className="text-center py-6 px-4">
           <h1 className="text-4xl mb-2">Amy's Kitchen</h1>
           <p className="text-ink-700 text-lg mb-6">
-            Rate the meals Amy makes for Energized Engines — and suggest your favourites.
+            Rate the meals Amy makes for Energized Engines — and add your favourites.
           </p>
 
           <div className="inline-block bg-cream-50 p-4 rounded-3xl shadow-soft print:shadow-none">

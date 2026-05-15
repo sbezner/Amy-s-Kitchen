@@ -67,7 +67,7 @@ export function Profile() {
             required
           />
           <p className="mt-2 text-xs text-ink-500">
-            Shown next to your ratings, comments, and meal suggestions.
+            Shown next to your ratings, comments, and any meals you add.
           </p>
         </div>
 
