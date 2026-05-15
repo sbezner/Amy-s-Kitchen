@@ -61,13 +61,8 @@ export function About() {
             toward the average too.
           </li>
           <li>
-            <strong>Delete meals & servings.</strong> The person who suggested a meal can delete it
-            while it's still un-scheduled. Once it's been on the calendar, only an admin can.
-          </li>
-          <li>
-            <strong>Decline a suggestion.</strong> When a suggested meal isn't going to happen,
-            admin can mark it Declined with a short reason — visible to everyone so the suggester
-            knows it was considered. Reversible.
+            <strong>Delete meals & servings.</strong> The person who added a meal can delete it
+            while it's never been scheduled. Once it's been on the calendar, only an admin can.
           </li>
         </ul>
       </section>

@@ -56,21 +56,16 @@ The **Meal** is the central object. Ratings, comments, upvotes, and the list
 of dates served all hang off a meal.
 
 - `users/{uid}` — `email`, `displayName`, `role: 'amy' | 'employee'`, `status: 'pending' | 'approved' | 'deactivated'`, `createdAt`
-- `mealLibrary/{mealId}` — `name`, `description`, `photos: string[]` (up to 6), `dietaryTags[]`, `createdAt`, `createdBy?`, optional `declinedReason` + `declinedAt` + `declinedBy`. Legacy single `photoUrl` is still read for display (backfilled into `photos[0]`) but no longer written.
+- `mealLibrary/{mealId}` — `name`, `description`, `photos: string[]` (up to 6), `dietaryTags[]`, `createdAt`, `createdBy?`. Legacy single `photoUrl` is still read for display (backfilled into `photos[0]`) but no longer written.
 - `mealLibrary/{mealId}/ratings/{uid}` — one rating per (meal, user). `stars` (1–5), `comment?`, `hiddenByAmy?`, `updatedAt`
 - `mealLibrary/{mealId}/upvotes/{uid}` — "make this again" signal, one per user per meal
 - `servings/{date}` — date → mealId mapping. **Doc id is the date** (`YYYY-MM-DD`) so concurrent schedules on the same day are race-free. Fields: `libraryId`, `servedDate`, `notes?`, `createdAt`
 - `servings/{date}/lookingForward/{uid}` — per-date anticipation reactions
 
-There is **no** `requests` collection anymore. Suggestions are just meals with
-zero servings; the Meals page filters them under "Suggested". Status (open /
-scheduled / made / declined) is implicit from whether servings reference the
-meal, plus the `declinedReason` field for explicit rejections.
-
-### Implicit status of a meal
-- **Active** — at least one serving references it
-- **Suggested** — no servings, no `declinedReason`
-- **Declined** — `declinedReason` is set (regardless of servings)
+There is **no** `requests` collection anymore. A meal is a meal — either it's
+been served (has servings) or it hasn't. The Meals page shows everything as a
+single list; users see a meal's serving count, rating, and upvote total inline
+on each card. There is no separate "declined" state.
 
 ## Auth & authorization
 
@@ -106,10 +101,9 @@ the list in `src/lib/allowedDomains.ts` in sync with the matching
 | Upvote ("make this again") | ✓ | ✓ |
 | Looking-forward reaction | ✓ | ✓ |
 | Edit own profile / display name | ✓ | ✓ |
-| Delete a meal | only if you created it AND it has zero servings AND not declined | ✓ |
+| Delete a meal | only if you created it AND it has zero servings | ✓ |
 | Remove a meal from a specific date | | ✓ |
 | Hide/unhide a rating | | ✓ |
-| Decline a suggestion (with reason) | | ✓ |
 | View Reports | ✓ | ✓ |
 
 When a meal is deleted, the handler cascades: deletes the meal's ratings + upvotes, and also deletes any `servings/*` that reference it (and their `lookingForward` sub-collections) so the calendar doesn't end up with orphan "Unknown meal" rows.
@@ -149,7 +143,7 @@ The app has gone through several reshapes since the initial 6-phase plan; the
 current state is the meal-centric unified model:
 
 - Auth: Google + email-link with domain allowlist and admin defensive bootstrap.
-- Meal-centric model: one rating per (user, meal), multi-photo gallery, dates served list, upvote, decline with reason.
+- Meal-centric model: one rating per (user, meal), multi-photo gallery, dates served list, upvote.
 - Anyone-can-edit meal management — only admins can delete or decline.
 - Calendar jumps straight to a meal page on tap. Empty days route to /day/:date for a Schedule CTA.
 - Reports: most/least liked + most frequent, last-30-days + all-time, CSV export.

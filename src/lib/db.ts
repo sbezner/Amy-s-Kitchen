@@ -19,7 +19,6 @@ function toEntry(id: string, data: Record<string, unknown>): MealLibraryEntry {
     photos = [data.photoUrl]
   }
   const createdAtField = data.createdAt as { toMillis?: () => number } | undefined
-  const declinedAtField = data.declinedAt as { toMillis?: () => number } | undefined
   return {
     id,
     name: (data.name as string) ?? '',
@@ -28,9 +27,6 @@ function toEntry(id: string, data: Record<string, unknown>): MealLibraryEntry {
     dietaryTags: ((data.dietaryTags as DietaryTag[]) ?? []),
     createdAt: createdAtField?.toMillis?.() ?? 0,
     createdBy: data.createdBy as string | undefined,
-    declinedReason: (data.declinedReason as string) || undefined,
-    declinedAt: declinedAtField?.toMillis?.(),
-    declinedBy: data.declinedBy as string | undefined,
   }
 }
 

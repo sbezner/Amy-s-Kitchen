@@ -1,4 +1,3 @@
-import { useState } from 'react'
 import { Link, useNavigate, useParams } from 'react-router-dom'
 import {
   collection,
@@ -8,12 +7,10 @@ import {
   query,
   serverTimestamp,
   setDoc,
-  updateDoc,
   where,
 } from 'firebase/firestore'
 import { db } from '../firebase'
 import { useAuth } from '../auth/AuthProvider'
-import { useDisplayName } from '../lib/users'
 import { useLibraryEntry, useServingsByMealId, useUpvotes } from '../lib/db'
 import { fromDateKey, formatDateHeading, isFuture } from '../lib/dates'
 import { DietaryTagChips } from '../components/DietaryTagChips'
@@ -31,9 +28,6 @@ export function MealDetail() {
   const meal = useLibraryEntry(id)
   const { servings } = useServingsByMealId(id)
   const { count: upvoteCount, upvoted } = useUpvotes(id ?? '', appUser?.uid)
-  const declinedByName = useDisplayName(meal?.declinedBy)
-
-  const [declineDialogOpen, setDeclineDialogOpen] = useState(false)
 
   if (!id) return null
   if (meal === undefined) return <Loading />
@@ -51,11 +45,7 @@ export function MealDetail() {
   }
 
   const isOwner = appUser?.uid === meal.createdBy
-  const isDeclined = !!meal.declinedReason
-  const canDelete = isAmy || (isOwner && servings.length === 0 && !isDeclined)
-  // Decline only applies to suggested meals — once a meal has been on
-  // the calendar, "decline" doesn't fit semantically.
-  const canDecline = isAmy && !isDeclined && servings.length === 0
+  const canDelete = isAmy || (isOwner && servings.length === 0)
   const futureServings = servings.filter((s) => isFuture(fromDateKey(s.servedDate)))
   const pastServings = servings.filter((s) => !isFuture(fromDateKey(s.servedDate)))
 
@@ -75,20 +65,17 @@ export function MealDetail() {
 
   async function handleDelete() {
     if (!id) return
-    const msg = servings.length > 0
-      ? `Delete "${meal!.name}"? This will also clear it from ${servings.length} scheduled date${servings.length === 1 ? '' : 's'}.`
-      : `Delete "${meal!.name}"?`
+    const msg =
+      servings.length > 0
+        ? `Delete "${meal!.name}"? This will also clear it from ${servings.length} scheduled date${servings.length === 1 ? '' : 's'}.`
+        : `Delete "${meal!.name}"?`
     if (!confirm(msg)) return
     try {
-      // Cascade-clean ratings, upvotes, and any servings referencing
-      // this meal so we don't leave orphan calendar entries pointing
-      // to a meal that no longer exists.
       const [ratings, upvotes, refServings] = await Promise.all([
         getDocs(collection(db, 'mealLibrary', id, 'ratings')),
         getDocs(collection(db, 'mealLibrary', id, 'upvotes')),
         getDocs(query(collection(db, 'servings'), where('libraryId', '==', id))),
       ])
-      // Also clear each serving's lookingForward sub-collection.
       const lookingForwardDocs = (
         await Promise.all(
           refServings.docs.map((s) =>
@@ -110,33 +97,6 @@ export function MealDetail() {
     }
   }
 
-  async function handleUndecline() {
-    if (!id) return
-    try {
-      await updateDoc(doc(db, 'mealLibrary', id), {
-        declinedReason: null,
-        declinedAt: null,
-        declinedBy: null,
-      })
-    } catch (err) {
-      alert(err instanceof Error ? err.message : 'Could not undo decline')
-    }
-  }
-
-  async function submitDecline(reason: string) {
-    if (!id || !appUser) return
-    try {
-      await updateDoc(doc(db, 'mealLibrary', id), {
-        declinedReason: reason,
-        declinedAt: serverTimestamp(),
-        declinedBy: appUser.uid,
-      })
-      setDeclineDialogOpen(false)
-    } catch (err) {
-      alert(err instanceof Error ? err.message : 'Could not decline')
-    }
-  }
-
   return (
     <div className="py-4 space-y-4">
       <div className="flex items-center justify-between">
@@ -145,23 +105,6 @@ export function MealDetail() {
         </button>
         <span aria-hidden className="w-12" />
       </div>
-
-      {isDeclined && (
-        <div className="card bg-terracotta-500/10 border border-terracotta-500/30">
-          <div className="flex items-center gap-2 mb-1">
-            <span className="text-[10px] font-bold uppercase tracking-wide text-terracotta-700 bg-terracotta-500/20 px-2 py-0.5 rounded-full">
-              Declined
-            </span>
-            <span className="text-xs text-ink-500">by {declinedByName}</span>
-          </div>
-          <p className="text-sm text-ink-700 whitespace-pre-wrap">{meal.declinedReason}</p>
-          {isAmy && (
-            <button className="btn-ghost text-sm mt-3 underline" onClick={handleUndecline}>
-              Undo decline
-            </button>
-          )}
-        </div>
-      )}
 
       <PhotoGallery photos={meal.photos} alt={meal.name} />
 
@@ -202,26 +145,12 @@ export function MealDetail() {
       />
 
       <div className="card space-y-2">
-        <Link
-          to={`/meals/${id}/edit`}
-          className="btn-secondary w-full"
-        >
+        <Link to={`/meals/${id}/edit`} className="btn-secondary w-full">
           Edit meal
         </Link>
-        <Link
-          to="/meals/new"
-          className="btn-ghost w-full"
-        >
+        <Link to="/meals/new" className="btn-ghost w-full">
           + Create another meal
         </Link>
-        {canDecline && (
-          <button
-            className="btn-ghost w-full"
-            onClick={() => setDeclineDialogOpen(true)}
-          >
-            Decline this meal
-          </button>
-        )}
         {canDelete && (
           <button
             className="btn-ghost w-full text-terracotta-700"
@@ -231,14 +160,6 @@ export function MealDetail() {
           </button>
         )}
       </div>
-
-      {declineDialogOpen && (
-        <DeclineDialog
-          mealName={meal.name}
-          onCancel={() => setDeclineDialogOpen(false)}
-          onSubmit={submitDecline}
-        />
-      )}
     </div>
   )
 }
@@ -257,7 +178,9 @@ function ServingsSection({
     return (
       <div className="card text-sm text-ink-500">
         Not yet on the calendar.{' '}
-        {isAmy ? "Tap a date on the calendar to schedule it." : "Up-vote it above so we'll see it."}
+        {isAmy
+          ? 'Tap a date on the calendar to schedule it.'
+          : "Up-vote it above so we'll see it."}
       </div>
     )
   }
@@ -302,7 +225,15 @@ function ServingsSection({
   )
 }
 
-function ServingRow({ servingId, date, isAmy }: { servingId: string; date: string; isAmy: boolean }) {
+function ServingRow({
+  servingId,
+  date,
+  isAmy,
+}: {
+  servingId: string
+  date: string
+  isAmy: boolean
+}) {
   async function remove(e: React.MouseEvent) {
     e.preventDefault()
     e.stopPropagation()
@@ -333,69 +264,6 @@ function ServingRow({ servingId, date, isAmy }: { servingId: string; date: strin
           Remove
         </button>
       )}
-    </div>
-  )
-}
-
-function DeclineDialog({
-  mealName,
-  onCancel,
-  onSubmit,
-}: {
-  mealName: string
-  onCancel: () => void
-  onSubmit: (reason: string) => void | Promise<void>
-}) {
-  const [reason, setReason] = useState('')
-  const [submitting, setSubmitting] = useState(false)
-
-  async function handleSubmit() {
-    if (!reason.trim()) return
-    setSubmitting(true)
-    try {
-      await onSubmit(reason.trim())
-    } finally {
-      setSubmitting(false)
-    }
-  }
-
-  return (
-    <div
-      role="dialog"
-      aria-modal="true"
-      className="fixed inset-0 z-50 flex items-end sm:items-center justify-center p-4 bg-ink-900/50"
-      onClick={onCancel}
-    >
-      <div
-        className="w-full max-w-md bg-white rounded-3xl p-5 shadow-soft"
-        onClick={(e) => e.stopPropagation()}
-      >
-        <h3 className="text-xl mb-2">Decline "{mealName}"</h3>
-        <p className="text-sm text-ink-700 mb-3">
-          Leave a short reason so whoever suggested it knows it was considered.
-        </p>
-        <textarea
-          className="input min-h-[80px]"
-          autoFocus
-          value={reason}
-          onChange={(e) => setReason(e.target.value)}
-          maxLength={500}
-          placeholder="e.g. takes too long to prep on a workday"
-        />
-        <div className="flex gap-2 mt-4">
-          <button
-            type="button"
-            className="btn-primary flex-1"
-            disabled={!reason.trim() || submitting}
-            onClick={handleSubmit}
-          >
-            {submitting ? 'Declining…' : 'Decline'}
-          </button>
-          <button type="button" className="btn-ghost" onClick={onCancel}>
-            Cancel
-          </button>
-        </div>
-      </div>
     </div>
   )
 }

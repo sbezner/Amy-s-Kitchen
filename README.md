@@ -34,15 +34,13 @@ holds the description, photos (up to 6), dietary tags, ratings & comments,
 Tapping any day on the calendar jumps straight to that meal's page.
 
 - **Calendar** — month grid; tap a day with a meal to see that meal, tap an empty day to schedule one.
-- **Meals** — full library, filterable: All / Active / Suggested / Declined. Anyone can add a meal; deletion is restricted (see permissions below).
+- **Meals** — full library as a single list. Each meal shows its serving count, rating, and upvote total. Anyone can add a meal; deletion is restricted (see permissions below).
 - **Reports** — most-liked, least-liked, and most-frequent meals over the last 30 days and all time. CSV export.
 - **Admin** (admin role only) — approve sign-ups, manage the roster, print the QR rollout poster.
 - **Profile** — change your own display name. (Tap "Hi *name*" in the header.)
 
-Suggestions are just meals with zero servings — there's no separate "requests"
-flow. Admins can **Decline** a suggestion with a required reason; declined
-meals stay visible with a red banner so the suggester sees their idea was
-considered. Decline is reversible.
+A meal is just a meal. Some have been served, some haven't. Anyone can add
+one; the team can rate, upvote, and look forward to specific dates.
 
 ### Permissions summary
 
@@ -54,12 +52,11 @@ considered. Decline is reversible.
 | Upvote ("make this again") | ✓ | ✓ |
 | Looking-forward reaction (per date) | ✓ | ✓ |
 | Edit your own display name | ✓ | ✓ |
-| Delete your own un-scheduled suggestion | ✓ | ✓ |
+| Delete a meal you created that has never been scheduled | ✓ | ✓ |
 | Approve new sign-ups | | ✓ |
-| Delete a scheduled meal | | ✓ |
+| Delete a meal that's been scheduled | | ✓ |
 | Remove a meal from a date | | ✓ |
 | Hide/unhide a rating | | ✓ |
-| Decline a suggestion | | ✓ |
 
 ## One-time setup
 
@@ -131,7 +128,7 @@ soften that:
 See `src/types.ts` for the full TypeScript types. Storage layout:
 
 - `users/{uid}` — `email`, `displayName`, `role`, `status`, `createdAt`
-- `mealLibrary/{mealId}` — `name`, `description`, `photos[]`, `dietaryTags[]`, `createdAt`, `createdBy?`, optional `declinedReason` / `declinedAt` / `declinedBy`
+- `mealLibrary/{mealId}` — `name`, `description`, `photos[]`, `dietaryTags[]`, `createdAt`, `createdBy?`
 - `mealLibrary/{mealId}/ratings/{uid}` — `stars`, `comment?`, `hiddenByAmy?`, `updatedAt`
 - `mealLibrary/{mealId}/upvotes/{uid}` — "make this again"
 - `servings/{YYYY-MM-DD}` — `libraryId`, `servedDate`, `notes?`, `createdAt`

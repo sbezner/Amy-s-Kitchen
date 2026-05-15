@@ -1,12 +1,10 @@
-import { useEffect, useMemo, useState } from 'react'
+import { useEffect, useState } from 'react'
 import { Link } from 'react-router-dom'
 import { collection, getDocs } from 'firebase/firestore'
 import { db } from '../firebase'
 import { useMealLibrary } from '../lib/db'
 import type { MealLibraryEntry } from '../types'
 import { DietaryTagChips } from '../components/DietaryTagChips'
-
-type Filter = 'all' | 'active' | 'suggested' | 'declined'
 
 interface MealStats {
   servingsCount: number
@@ -17,7 +15,6 @@ interface MealStats {
 
 export function Meals() {
   const { library, loading } = useMealLibrary()
-  const [filter, setFilter] = useState<Filter>('all')
   const [stats, setStats] = useState<Map<string, MealStats>>(new Map())
 
   // Load aggregate stats for every meal once. Small data set; live snapshots
@@ -39,10 +36,8 @@ export function Meals() {
             getDocs(collection(db, 'mealLibrary', m.id, 'ratings')),
             getDocs(collection(db, 'mealLibrary', m.id, 'upvotes')),
           ])
-          const ratings = ratingsSnap.docs
-            .map((r) => r.data())
-            .filter((r) => !r.hiddenByAmy)
-          const sum = ratings.reduce((acc, r) => acc + (r.stars as number ?? 0), 0)
+          const ratings = ratingsSnap.docs.map((r) => r.data()).filter((r) => !r.hiddenByAmy)
+          const sum = ratings.reduce((acc, r) => acc + ((r.stars as number) ?? 0), 0)
           next.set(m.id, {
             servingsCount: servingsByMeal.get(m.id) ?? 0,
             ratingsCount: ratings.length,
@@ -59,18 +54,6 @@ export function Meals() {
     }
   }, [library])
 
-  const filtered = useMemo(() => {
-    return library.filter((m) => {
-      if (m.declinedReason) return filter === 'all' || filter === 'declined'
-      const s = stats.get(m.id)
-      const isActive = (s?.servingsCount ?? 0) > 0
-      if (filter === 'active') return isActive
-      if (filter === 'suggested') return !isActive
-      if (filter === 'declined') return false
-      return true
-    })
-  }, [library, filter, stats])
-
   return (
     <div className="py-4 space-y-3">
       <div className="flex items-center justify-between">
@@ -80,43 +63,15 @@ export function Meals() {
         </Link>
       </div>
 
-      <div className="flex gap-2 overflow-x-auto pb-1 -mx-1 px-1">
-        {(
-          [
-            { v: 'all', label: 'All' },
-            { v: 'active', label: 'Active' },
-            { v: 'suggested', label: 'Suggested' },
-            { v: 'declined', label: 'Declined' },
-          ] as const
-        ).map((tab) => {
-          const active = filter === tab.v
-          return (
-            <button
-              key={tab.v}
-              onClick={() => setFilter(tab.v)}
-              className={`shrink-0 px-3 py-1.5 rounded-full text-sm font-semibold transition ${
-                active ? 'bg-terracotta-500 text-white' : 'bg-cream-100 text-ink-700 hover:bg-cream-200'
-              }`}
-            >
-              {tab.label}
-            </button>
-          )
-        })}
-      </div>
-
       {loading && <div className="card text-sm text-ink-500">Loading…</div>}
 
-      {!loading && filtered.length === 0 && (
+      {!loading && library.length === 0 && (
         <div className="card">
-          <p className="text-ink-700">
-            {filter === 'all'
-              ? "No meals yet. Add the first one — anyone can."
-              : `Nothing in this view.`}
-          </p>
+          <p className="text-ink-700">No meals yet. Add the first one — anyone can.</p>
         </div>
       )}
 
-      {filtered.map((entry) => (
+      {library.map((entry) => (
         <MealCard key={entry.id} entry={entry} stats={stats.get(entry.id)} />
       ))}
     </div>
@@ -131,25 +86,14 @@ function MealCard({ entry, stats }: { entry: MealLibraryEntry; stats: MealStats 
       className="card flex gap-4 hover:bg-cream-100/60 transition"
     >
       {photo ? (
-        <img
-          src={photo}
-          alt=""
-          className="w-20 h-20 object-cover rounded-2xl shrink-0"
-        />
+        <img src={photo} alt="" className="w-20 h-20 object-cover rounded-2xl shrink-0" />
       ) : (
         <div className="w-20 h-20 rounded-2xl bg-cream-100 shrink-0 flex items-center justify-center text-3xl">
           🍽️
         </div>
       )}
       <div className="min-w-0 flex-1">
-        <div className="flex items-center gap-2 flex-wrap">
-          <div className="font-semibold text-lg truncate">{entry.name}</div>
-          {entry.declinedReason && (
-            <span className="text-[10px] font-bold uppercase tracking-wide text-terracotta-700 bg-terracotta-500/20 px-2 py-0.5 rounded-full">
-              Declined
-            </span>
-          )}
-        </div>
+        <div className="font-semibold text-lg truncate">{entry.name}</div>
         {entry.description && (
           <div className="text-sm text-ink-500 line-clamp-2">{entry.description}</div>
         )}
@@ -165,16 +109,8 @@ function MealCard({ entry, stats }: { entry: MealLibraryEntry; stats: MealStats 
                 ★ {stats.avgStars.toFixed(1)} · {stats.ratingsCount}
               </span>
             )}
-            {stats.servingsCount > 0 && (
-              <span>
-                Served {stats.servingsCount}×
-              </span>
-            )}
-            {stats.upvotes > 0 && (
-              <span>
-                👍 {stats.upvotes}
-              </span>
-            )}
+            {stats.servingsCount > 0 && <span>Served {stats.servingsCount}×</span>}
+            {stats.upvotes > 0 && <span>👍 {stats.upvotes}</span>}
           </div>
         )}
       </div>

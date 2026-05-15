@@ -42,8 +42,7 @@ service cloud.firestore {
 
       // Anyone approved can add or edit a meal entry. String-length and
       // photo-array caps keep payloads sane.
-      // Only Amy can set/clear decline fields (declinedReason etc).
-      allow create: if isApproved()
+      allow create, update: if isApproved()
         && request.resource.data.name is string
         && request.resource.data.name.size() <= 120
         && (!('description' in request.resource.data)
@@ -51,40 +50,11 @@ service cloud.firestore {
             && request.resource.data.description.size() <= 2000)
         && (!('photos' in request.resource.data)
             || (request.resource.data.photos is list
-                && request.resource.data.photos.size() <= 6))
-        && !('declinedReason' in request.resource.data);
-      allow update: if (
-        (isApproved()
-          && request.resource.data.name is string
-          && request.resource.data.name.size() <= 120
-          && (!('description' in request.resource.data)
-              || request.resource.data.description is string
-              && request.resource.data.description.size() <= 2000)
-          && (!('photos' in request.resource.data)
-              || (request.resource.data.photos is list
-                  && request.resource.data.photos.size() <= 6))
-          // Non-admins can't touch decline fields.
-          && request.resource.data.get('declinedReason', '') == resource.data.get('declinedReason', '')
-          && request.resource.data.get('declinedBy', '') == resource.data.get('declinedBy', ''))
-        || (isAmy()
-          && request.resource.data.name is string
-          && request.resource.data.name.size() <= 120
-          && (!('description' in request.resource.data)
-              || request.resource.data.description is string
-              && request.resource.data.description.size() <= 2000)
-          && (!('photos' in request.resource.data)
-              || (request.resource.data.photos is list
-                  && request.resource.data.photos.size() <= 6))
-          // Decline reason size cap (admin can clear it by setting null).
-          && (request.resource.data.get('declinedReason', null) == null
-              || (request.resource.data.declinedReason is string
-                  && request.resource.data.declinedReason.size() <= 500)))
-      );
+                && request.resource.data.photos.size() <= 6));
 
-      // Only Amy can delete a meal that's been scheduled, but the
-      // creator of a pure-suggestion meal can also delete their own.
-      // The "no servings exist" check is enforced client-side (rules
-      // can't query across collections cheaply); this is acceptable
+      // Only Amy can delete a meal that's been served, but the creator
+      // of an un-served meal can also delete their own. The "no
+      // servings exist" check is enforced client-side; this is fine
       // because an approved user could only orphan their own data.
       allow delete: if isAmy()
         || (isApproved()

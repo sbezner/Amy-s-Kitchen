@@ -30,10 +30,6 @@ export interface MealLibraryEntry {
   dietaryTags: DietaryTag[]
   createdAt: number
   createdBy?: string
-  /** If set, admin has declined this meal; the reason is visible to everyone. */
-  declinedReason?: string
-  declinedAt?: number
-  declinedBy?: string
 }
 
 export interface Serving {
